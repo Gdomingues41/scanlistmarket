@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scanlist Market</title>
+  <style>
+    body {
+      background-color: #fff;
+      font-family: Arial, sans-serif;
+      padding: 24px 16px;
+      color: #000;
+      transition: font-size 0.3s;
+    }
+    header {
+      text-align: center;
+      background-color: #d60000;
+      padding: 20px;
+      color: white;
+    }
+    .logo {
+      width: 100px;
+      height: auto;
+      margin-bottom: 10px;
+    }
+    h1 {
+      margin-top: 0;
+    }
+    .button {
+      background-color: #d60000;
+      color: white;
+      padding: 12px;
+      margin: 5px 0;
+      border: none;
+      border-radius: 8px;
+      width: 100%;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    .cart-notification {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      z-index: 1000;
+      cursor: pointer;
+    }
+    .cart-notification span {
+      position: absolute;
+      top: -10px;
+      right: -10px;
+      background-color: red;
+      color: white;
+      border-radius: 50%;
+      padding: 5px 8px;
+      font-size: 12px;
+    }
+    .product-img {
+      width: 80px;
+      height: auto;
+      display: block;
+      margin-bottom: 8px;
+    }
+    input[type="text"], input[type="number"] {
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+      margin: 10px 0;
+      box-sizing: border-box;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+    #carrinhoDetalhado {
+      margin-top: 30px;
+      border-top: 1px solid #ccc;
+      padding-top: 20px;
+    }
+    #mensagemHistorico {
+      white-space: pre-line;
+      background: #f9f9f9;
+      padding: 15px;
+      border-radius: 6px;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <img src="https://i.imgur.com/dHOSups.png" alt="Logo" class="logo">
+    <h1 id="tituloApp">Scanlist Market</h1>
+  </header>
+
+  <main>
+    <input type="text" id="barcodeInput" placeholder="Digite ou escaneie o código de barras">
+    <button class="button" onclick="buscarProduto()">🔍 Buscar Produto</button>
+    <button class="button" onclick="escanearProduto()">📷 Escanear Produto</button>
+    <button class="button" onclick="manualEntry()">📝 Cadastrar Produto Manualmente</button>
+    <button class="button" onclick="usarUltimaCompra()">♻️ Usar Última Compra</button>
+    <button class="button" onclick="verHistorico()">📋 Ver Histórico</button>
+    <button class="button" onclick="limparHistorico()">🧹 Limpar Histórico</button>
+    <button class="button" onclick="alternarIdioma()">🌐 Mudar Idioma PT/EN</button>
+    <button class="button" onclick="alternarAcessibilidade()">🧓 Acessibilidade</button>
+
+    <div id="produtoEncontrado" style="display:none; margin-top:20px;">
+      <img id="imagemProduto" class="product-img" />
+      <div><strong id="nomeProduto"></strong></div>
+      <input type="number" id="preco" placeholder="Preço unitário">
+      <input type="number" id="quantidade" placeholder="Quantidade">
+      <button class="button" onclick="adicionarAoCarrinho()">➕ Adicionar ao Carrinho</button>
+    </div>
+
+    <div class="cart-notification" onclick="mostrarCarrinho()">
+      <img src="https://cdn-icons-png.flaticon.com/512/1170/1170678.png" width="40">
+      <span id="cartCount">0</span>
+    </div>
+
+    <div id="carrinhoDetalhado" style="display:none;"></div>
+    <div id="mensagemHistorico" style="display:none;"></div>
+    <button class="button" onclick="finalizarCompra()">✅ Finalizar Compra</button>
+  </main>
+
+  <script>
+    let carrinho = [];
+    let historico = [];
+    let idioma = 'pt';
+    let fonteAumentada = false;
+
+    function buscarProduto() {
+      const codigo = document.getElementById('barcodeInput').value.trim();
+      if (!codigo) return alert('Digite um código de barras');
+
+      fetch(`https://world.openfoodfacts.org/api/v0/product/${codigo}.json`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.status === 1) {
+            const nome = data.product.product_name || 'Produto sem nome';
+            const imagem = data.product.image_small_url || '';
+            document.getElementById('nomeProduto').innerText = nome;
+            document.getElementById('imagemProduto').src = imagem;
+            document.getElementById('produtoEncontrado').style.display = 'block';
+          } else {
+            alert('Produto não encontrado na base OpenFoodFacts.');
+          }
+        })
+        .catch(() => alert('Erro ao buscar produto.'));
+    }
+
+    function escanearProduto() {
+      alert('Função de escaneamento será integrada com PWA ou WebCam.');
+    }
+
+    function manualEntry() {
+      const nome = prompt('Nome do produto:');
+      const quantidade = parseInt(prompt('Quantidade:'), 10);
+      const preco = parseFloat(prompt('Preço unitário:').replace(',', '.'));
+      if (nome && !isNaN(quantidade) && quantidade > 0 && !isNaN(preco)) {
+        adicionarAoCarrinhoManual(nome, quantidade, preco);
+      } else {
+        alert('Dados inválidos.');
+      }
+    }
+
+    function adicionarAoCarrinho() {
+      const nome = document.getElementById('nomeProduto').innerText;
+      const qtd = parseInt(document.getElementById('quantidade').value);
+      const preco = parseFloat(document.getElementById('preco').value);
+      if (!qtd || qtd <= 0 || isNaN(preco)) return alert('Preencha quantidade e preço corretamente.');
+      adicionarAoCarrinhoManual(nome, qtd, preco);
+      document.getElementById('produtoEncontrado').style.display = 'none';
+      document.getElementById('barcodeInput').value = '';
+      document.getElementById('quantidade').value = '';
+      document.getElementById('preco').value = '';
+    }
+
+    function adicionarAoCarrinhoManual(nome, qtd, preco) {
+      carrinho.push({ nome, qtd, preco });
+      document.getElementById('cartCount').innerText = carrinho.length;
+    }
+
+    function mostrarCarrinho() {
+      const div = document.getElementById('carrinhoDetalhado');
+      div.innerHTML = '<h3>Itens no carrinho:</h3>';
+      let total = 0;
+      carrinho.forEach((item, index) => {
+        const subtotal = item.qtd * item.preco;
+        total += subtotal;
+        div.innerHTML += `<p><strong>${item.nome}</strong> - R$ ${item.preco.toFixed(2)} x ${item.qtd} = <strong>R$ ${subtotal.toFixed(2)}</strong> <button onclick="removerItem(${index})">❌</button></p>`;
+      });
+      div.innerHTML += `<h4>Total da compra: R$ ${total.toFixed(2)}</h4>`;
+      div.style.display = 'block';
+    }
+
+    function removerItem(index) {
+      carrinho.splice(index, 1);
+      document.getElementById('cartCount').innerText = carrinho.length;
+      mostrarCarrinho();
+    }
+
+    function finalizarCompra() {
+      if (carrinho.length === 0) {
+        alert('Carrinho vazio.');
+        return;
+      }
+      historico.push([...carrinho]);
+      carrinho = [];
+      document.getElementById('cartCount').innerText = 0;
+      document.getElementById('carrinhoDetalhado').innerHTML = '';
+      document.getElementById('mensagemHistorico').style.display = 'none';
+      alert('Compra finalizada com sucesso!');
+    }
+
+    function usarUltimaCompra() {
+      if (historico.length === 0) return alert('Nenhuma compra anterior encontrada.');
+      carrinho = [...historico[historico.length - 1]];
+      document.getElementById('cartCount').innerText = carrinho.length;
+      mostrarCarrinho();
+    }
+
+    function verHistorico() {
+      const msg = document.getElementById('mensagemHistorico');
+      if (historico.length === 0) {
+        msg.innerText = 'Nenhum histórico disponível.';
+      } else {
+        let texto = 'Histórico de compras:\n';
+        historico.forEach((compra, i) => {
+          texto += `\nCompra ${i + 1}:\n`;
+          let total = 0;
+          compra.forEach(item => {
+            const subtotal = item.qtd * item.preco;
+            total += subtotal;
+            texto += `${item.nome} - ${item.qtd} x R$ ${item.preco.toFixed(2)} = R$ ${subtotal.toFixed(2)}\n`;
+          });
+          texto += `Total: R$ ${total.toFixed(2)}\n`;
+        });
+        msg.innerText = texto;
+      }
+      msg.style.display = 'block';
+    }
+
+    function limparHistorico() {
+      historico = [];
+      document.getElementById('mensagemHistorico').style.display = 'none';
+      alert('Histórico apagado.');
+    }
+
+    function alternarIdioma() {
+      const h1 = document.getElementById('tituloApp');
+      idioma = idioma === 'pt' ? 'en' : 'pt';
+      h1.innerText = idioma === 'pt' ? 'Scanlist Market' : 'Scanlist Market (EN)';
+      alert('Idioma alterado para ' + (idioma === 'pt' ? 'Português' : 'Inglês'));
+    }
+
+    function alternarAcessibilidade() {
+      fonteAumentada = !fonteAumentada;
+      document.body.style.fontSize = fonteAumentada ? '20px' : '16px';
+      alert('Modo acessibilidade ' + (fonteAumentada ? 'ativado' : 'desativado'));
+    }
+  </script>
+</body>
+</html>
