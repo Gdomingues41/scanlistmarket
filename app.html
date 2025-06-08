@@ -147,7 +147,7 @@
 
     window.buscarProduto = () => {
       const code = document.getElementById("codigoBarra").value;
-      fetch(https://world.openfoodfacts.org/api/v0/product/${code}.json)
+      fetch(`https://world.openfoodfacts.org/api/v0/product/${code}.json`)
         .then(res => res.json())
         .then(data => {
           if (data.status === 1) {
@@ -170,7 +170,7 @@
       cart.push({ nome, preco, quantidade, total });
       document.getElementById("cartCount").innerText = cart.length;
       document.getElementById("produto-info").style.display = "none";
-      document.getElementById("totalBar").innerText = Total: R$ ${cart.reduce((acc, p) => acc + p.total, 0).toFixed(2).replace(".", ",")};
+      document.getElementById("totalBar").innerText = `Total: R$ ${cart.reduce((acc, p) => acc + p.total, 0).toFixed(2).replace(".", ",")}`;
       document.getElementById("totalBar").style.display = "block";
     };
 
@@ -189,7 +189,7 @@
       cart.splice(index, 1);
       document.getElementById("cartCount").innerText = cart.length;
       verCarrinho();
-      document.getElementById("totalBar").innerText = Total: R$ ${cart.reduce((acc, p) => acc + p.total, 0).toFixed(2).replace(".", ",")};
+      document.getElementById("totalBar").innerText = `Total: R$ ${cart.reduce((acc, p) => acc + p.total, 0).toFixed(2).replace(".", ",")}`;
     };
 
     window.cadastrarProdutoManual = () => {
@@ -226,9 +226,9 @@
           const dados = snapshot.val();
           let texto = "";
           Object.values(dados).forEach((compra, i) => {
-            texto += \nCompra ${i + 1}:\n;
+            texto += `\nCompra ${i + 1}:\n`;
             compra.forEach(p => {
-              texto += - ${p.nome}: R$ ${p.preco} x ${p.quantidade} = R$ ${p.total}\n;
+              texto += `- ${p.nome}: R$ ${p.preco} x ${p.quantidade} = R$ ${p.total}\n`;
             });
           });
           document.getElementById("mensagemHistorico").innerText = texto;
