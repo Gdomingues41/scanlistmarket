@@ -1,0 +1,246 @@
+<!DOCTYPE html><html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scanlist Market</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0 16px;
+      background-color: #fff;
+    }
+    .header {
+      background-color: #d40000;
+      padding: 20px;
+      text-align: center;
+      color: white;
+      position: relative;
+    }
+    .header img {
+      width: 80px;
+      display: block;
+      margin: 0 auto 10px;
+    }
+    .cart-icon {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      font-size: 24px;
+      color: white;
+      cursor: pointer;
+    }
+    .cart-count {
+      background-color: red;
+      color: white;
+      border-radius: 50%;
+      padding: 2px 6px;
+      font-size: 12px;
+      position: absolute;
+      top: -10px;
+      right: -10px;
+    }
+    .container {
+      max-width: 500px;
+      margin: 0 auto;
+      text-align: center;
+    }
+    .btn {
+      display: block;
+      width: 100%;
+      background-color: #d40000;
+      color: white;
+      padding: 12px;
+      margin: 8px 0;
+      border: none;
+      border-radius: 4px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    .btn:hover {
+      background-color: #a80000;
+    }
+    .input-field {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    .product-img {
+      max-width: 200px;
+      margin: 20px auto;
+      display: block;
+    }
+    .total-bar {
+      background-color: #d40000;
+      color: white;
+      padding: 10px;
+      text-align: center;
+      font-weight: bold;
+      margin-top: 20px;
+    }
+    .big-font * {
+      font-size: 20px !important;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <img src="https://i.imgur.com/dHOSups.png" alt="Scanlist Market Logo">
+    <h1>Scanlist Market</h1>
+    <div class="cart-icon" onclick="verCarrinho()">
+      🛒<span class="cart-count" id="cartCount">0</span>
+    </div>
+  </div>
+  <div class="container">
+    <input id="codigoBarra" class="input-field" placeholder="Digite ou escaneie o código">
+    <button class="btn" onclick="buscarProduto()">🔍 Buscar Produto</button>
+    <button class="btn" onclick="escanearProduto()">📷 Escanear Produto</button>
+    <button class="btn" onclick="cadastrarProdutoManual()">📝 Cadastrar Produto Manualmente</button>
+    <button class="btn" onclick="usarUltimaCompra()">👤 Usar Última Compra</button>
+    <button class="btn" onclick="verHistorico()">📄 Ver Histórico</button>
+    <button class="btn" onclick="limparHistorico()">🧹 Limpar Histórico</button>
+    <button class="btn" onclick="mudarIdioma()">🌐 Mudar Idioma PT/EN</button>
+    <button class="btn" onclick="toggleAcessibilidade()">🧓 Acessibilidade</button>
+    <div id="produto-info" style="display:none; text-align: center;">
+      <img id="produto-imagem" class="product-img" src="" alt="Imagem do Produto">
+      <input id="produto-nome" type="text" style="margin: 10px auto; font-weight: bold; width: 100%; text-align: center;"/>
+      <div>
+        <input id="preco-unitario" class="input-field" placeholder="Preço unitário">
+        <input id="quantidade" class="input-field" placeholder="Quantidade" type="number" min="1">
+      </div>
+      <button class="btn" onclick="adicionarAoCarrinho()">➕ Adicionar ao Carrinho</button>
+    </div>
+    <div id="carrinhoDetalhado" style="display:none;"></div>
+    <div id="mensagemHistorico" style="white-space: pre-wrap; margin-top: 20px;"></div>
+    <div class="total-bar" id="totalBar" style="display: none;"></div>
+    <p style="margin-top: 24px; font-size: 14px;">Apoie o projeto 💖<br>Pix: <strong>biedomingues33@gmail.com</strong></p>
+    <div style="margin-top: 10px;">
+      <form action="https://www.paypal.com/donate" method="post" target="_blank">
+        <input type="hidden" name="business" value="biedomingues33@gmail.com">
+        <input type="hidden" name="currency_code" value="USD">
+        <input type="hidden" name="amount" value="4.99">
+        <input type="submit" value="Doar via PayPal (US$4.99)" class="btn">
+      </form>
+    </div>
+  </div>  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-app.js";
+    import { getDatabase, ref, set, push, onValue } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCtke_2T3e0HDDMqJsfJsRGs5KcKtN3Xe8",
+      authDomain: "scanlistmarket-30143.firebaseapp.com",
+      databaseURL: "https://scanlistmarket-30143-default-rtdb.firebaseio.com",
+      projectId: "scanlistmarket-30143",
+      storageBucket: "scanlistmarket-30143.appspot.com",
+      messagingSenderId: "428406265714",
+      appId: "1:428406265714:web:0a9d92dc1229458a3d6feb"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    const cart = [];
+    let idioma = "pt";
+
+    window.buscarProduto = () => {
+      const code = document.getElementById("codigoBarra").value;
+      fetch(https://world.openfoodfacts.org/api/v0/product/${code}.json)
+        .then(res => res.json())
+        .then(data => {
+          if (data.status === 1) {
+            const produto = data.product;
+            document.getElementById("produto-nome").value = produto.product_name || "Produto não identificado";
+            document.getElementById("produto-imagem").src = produto.image_url || "";
+            document.getElementById("produto-info").style.display = "block";
+          } else {
+            alert("Produto não encontrado. Cadastre manualmente.");
+          }
+        });
+    };
+
+    window.adicionarAoCarrinho = () => {
+      const nome = document.getElementById("produto-nome").value;
+      const preco = parseFloat(document.getElementById("preco-unitario").value.replace(",", ".")) || 0;
+      const quantidade = parseInt(document.getElementById("quantidade").value) || 1;
+      const total = preco * quantidade;
+
+      cart.push({ nome, preco, quantidade, total });
+      document.getElementById("cartCount").innerText = cart.length;
+      document.getElementById("produto-info").style.display = "none";
+      document.getElementById("totalBar").innerText = Total: R$ ${cart.reduce((acc, p) => acc + p.total, 0).toFixed(2).replace(".", ",")};
+      document.getElementById("totalBar").style.display = "block";
+    };
+
+    window.verCarrinho = () => {
+      let html = "<h3>Itens do Carrinho:</h3><ul style='text-align:left;'>";
+      cart.forEach((p, i) => {
+        html += `<li>${p.nome} - R$ ${p.preco.toFixed(2)} x ${p.quantidade} = <strong>R$ ${p.total.toFixed(2)}</strong>
+        <button onclick='removerItem(${i})'>🗑</button></li>`;
+      });
+      html += "</ul>";
+      document.getElementById("carrinhoDetalhado").innerHTML = html;
+      document.getElementById("carrinhoDetalhado").style.display = "block";
+    };
+
+    window.removerItem = (index) => {
+      cart.splice(index, 1);
+      document.getElementById("cartCount").innerText = cart.length;
+      verCarrinho();
+      document.getElementById("totalBar").innerText = Total: R$ ${cart.reduce((acc, p) => acc + p.total, 0).toFixed(2).replace(".", ",")};
+    };
+
+    window.cadastrarProdutoManual = () => {
+      document.getElementById("produto-nome").value = "";
+      document.getElementById("produto-imagem").src = "";
+      document.getElementById("produto-info").style.display = "block";
+    };
+
+    window.mudarIdioma = () => {
+      idioma = idioma === "pt" ? "en" : "pt";
+      alert("Idioma alterado para " + (idioma === "pt" ? "Português" : "Inglês"));
+    };
+
+    window.toggleAcessibilidade = () => {
+      document.body.classList.toggle("big-font");
+    };
+
+    window.usarUltimaCompra = () => {
+      onValue(ref(db, "ultimaCompra"), (snapshot) => {
+        if (snapshot.exists()) {
+          const produtos = snapshot.val();
+          for (let i in produtos) cart.push(produtos[i]);
+          alert("Última compra adicionada ao carrinho.");
+          document.getElementById("cartCount").innerText = cart.length;
+        } else {
+          alert("Nenhuma compra anterior encontrada.");
+        }
+      });
+    };
+
+    window.verHistorico = () => {
+      onValue(ref(db, "compras"), (snapshot) => {
+        if (snapshot.exists()) {
+          const dados = snapshot.val();
+          let texto = "";
+          Object.values(dados).forEach((compra, i) => {
+            texto += \nCompra ${i + 1}:\n;
+            compra.forEach(p => {
+              texto += - ${p.nome}: R$ ${p.preco} x ${p.quantidade} = R$ ${p.total}\n;
+            });
+          });
+          document.getElementById("mensagemHistorico").innerText = texto;
+        } else {
+          alert("Sem histórico disponível.");
+        }
+      });
+    };
+
+    window.limparHistorico = () => {
+      set(ref(db, "compras"), null);
+      alert("Histórico limpo com sucesso.");
+    };
+  </script></body>
+</html>
