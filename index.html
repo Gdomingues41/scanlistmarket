@@ -23,11 +23,10 @@
       color: #fff;
       margin-bottom: 24px;
     }
-    input[type="email"],
-    input[type="password"] {
+    input {
       width: 280px;
       padding: 12px;
-      margin-bottom: 16px;
+      margin-bottom: 12px;
       border: none;
       border-radius: 4px;
       font-size: 16px;
@@ -35,7 +34,7 @@
     .btn {
       width: 280px;
       padding: 12px;
-      margin-bottom: 16px;
+      margin-bottom: 12px;
       border: none;
       border-radius: 4px;
       font-size: 16px;
@@ -43,6 +42,7 @@
       background-color: #fff;
       color: #d40000;
       font-weight: bold;
+      transition: opacity 0.2s;
     }
     .btn-red {
       background-color: #d40000;
@@ -55,51 +55,109 @@
 </head>
 <body>
   <img src="https://i.imgur.com/dHOSups.png" alt="Scanlist Market Logo" class="logo">
-  <h1>ScanlistMarket</h1>
+  <h1>Scanlist Market</h1>
+
+  <input type="text" id="nome" placeholder="Nome completo">
   <input type="email" id="email" placeholder="Email">
   <input type="password" id="senha" placeholder="Senha">
+  <input type="password" id="confirmarSenha" placeholder="Confirmar senha">
+
   <button class="btn btn-red" onclick="loginEmail()">Entrar com Email</button>
   <button class="btn btn-red" onclick="criarConta()">Criar Conta</button>
   <button class="btn btn-red" onclick="loginGoogle()">Entrar com Google</button>
-  <button class="btn btn-red" onclick="toggleAcessibilidade()">🧓 Acessibilidade</button>
 
   <script type="module">
+    // Importando Firebase
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-app.js";
-    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithRedirect, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-auth.js";
+    import {
+      getAuth,
+      signInWithEmailAndPassword,
+      createUserWithEmailAndPassword,
+      updateProfile,
+      signInWithPopup,
+      GoogleAuthProvider,
+      onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-auth.js";
 
+    // 🔥 Sua configuração do Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyCtke_2T3e0HDDMqJsfJsRGs5KcKtN3Xe8",
       authDomain: "scanlistmarket-30143.firebaseapp.com",
       projectId: "scanlistmarket-30143",
     };
 
+    // Inicializando Firebase
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const provider = new GoogleAuthProvider();
 
+    // 🔑 Login com Email e Senha
     window.loginEmail = () => {
-      const email = document.getElementById("email").value;
+      const email = document.getElementById("email").value.trim();
       const senha = document.getElementById("senha").value;
+
+      if (!email || !senha) {
+        alert("Preencha email e senha.");
+        return;
+      }
+
       signInWithEmailAndPassword(auth, email, senha)
-        .then(() => window.location.href = "app.html")
-        .catch(err => alert("Erro: " + err.message));
+        .then(() => {
+          window.location.href = "app.html";
+        })
+        .catch(err => {
+          alert("Erro ao logar: " + err.message);
+        });
     };
 
+    // ✍️ Criar Conta
     window.criarConta = () => {
-      const email = document.getElementById("email").value;
+      const nome = document.getElementById("nome").value.trim();
+      const email = document.getElementById("email").value.trim();
       const senha = document.getElementById("senha").value;
+      const confirmarSenha = document.getElementById("confirmarSenha").value;
+
+      if (!nome || !email || !senha || !confirmarSenha) {
+        alert("Preencha todos os campos.");
+        return;
+      }
+
+      if (senha !== confirmarSenha) {
+        alert("As senhas não conferem.");
+        return;
+      }
+
       createUserWithEmailAndPassword(auth, email, senha)
-        .then(() => window.location.href = "app.html")
-        .catch(err => alert("Erro: " + err.message));
+        .then(userCredential => {
+          return updateProfile(userCredential.user, {
+            displayName: nome
+          });
+        })
+        .then(() => {
+          window.location.href = "app.html";
+        })
+        .catch(err => {
+          alert("Erro ao criar conta: " + err.message);
+        });
     };
 
+    // 🌐 Login com Google
     window.loginGoogle = () => {
-      signInWithRedirect(auth, provider);
+      signInWithPopup(auth, provider)
+        .then(() => {
+          window.location.href = "app.html";
+        })
+        .catch(err => {
+          alert("Erro ao logar com Google: " + err.message);
+        });
     };
 
-    window.toggleAcessibilidade = () => {
-      document.body.classList.toggle("big-font");
-    };
+    // 🔒 Verificar se já está logado
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        window.location.href = "app.html";
+      }
+    });
   </script>
 </body>
 </html>
