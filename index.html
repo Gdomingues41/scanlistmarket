@@ -67,8 +67,7 @@
   <button class="btn btn-red" onclick="loginGoogle()">Entrar com Google</button>
 
   <script type="module">
-    // Importando Firebase
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-app.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
     import {
       getAuth,
       signInWithEmailAndPassword,
@@ -77,24 +76,21 @@
       signInWithPopup,
       GoogleAuthProvider,
       onAuthStateChanged
-    } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-auth.js";
+    } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
 
-    // 🔥 Sua configuração do Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyCtke_2T3e0HDDMqJsfJsRGs5KcKtN3Xe8",
       authDomain: "scanlistmarket-30143.firebaseapp.com",
       projectId: "scanlistmarket-30143",
     };
 
-    // Inicializando Firebase
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const provider = new GoogleAuthProvider();
 
-    // 🔑 Login com Email e Senha
     window.loginEmail = () => {
-      const email = document.getElementById("email").value.trim();
-      const senha = document.getElementById("senha").value;
+      const email = document.getElementById('email').value.trim();
+      const senha = document.getElementById('senha').value;
 
       if (!email || !senha) {
         alert("Preencha email e senha.");
@@ -110,12 +106,11 @@
         });
     };
 
-    // ✍️ Criar Conta
     window.criarConta = () => {
-      const nome = document.getElementById("nome").value.trim();
-      const email = document.getElementById("email").value.trim();
-      const senha = document.getElementById("senha").value;
-      const confirmarSenha = document.getElementById("confirmarSenha").value;
+      const nome = document.getElementById('nome').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const senha = document.getElementById('senha').value;
+      const confirmarSenha = document.getElementById('confirmarSenha').value;
 
       if (!nome || !email || !senha || !confirmarSenha) {
         alert("Preencha todos os campos.");
@@ -129,19 +124,17 @@
 
       createUserWithEmailAndPassword(auth, email, senha)
         .then(userCredential => {
-          return updateProfile(userCredential.user, {
+          updateProfile(userCredential.user, {
             displayName: nome
+          }).then(() => {
+            window.location.href = "app.html";
           });
-        })
-        .then(() => {
-          window.location.href = "app.html";
         })
         .catch(err => {
           alert("Erro ao criar conta: " + err.message);
         });
     };
 
-    // 🌐 Login com Google
     window.loginGoogle = () => {
       signInWithPopup(auth, provider)
         .then(() => {
@@ -152,7 +145,6 @@
         });
     };
 
-    // 🔒 Verificar se já está logado
     onAuthStateChanged(auth, (user) => {
       if (user) {
         window.location.href = "app.html";
