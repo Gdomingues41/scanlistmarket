@@ -6,32 +6,47 @@
   <title>Scanlist Market</title>
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
   <style>
-    /* ... seu CSS existente ... */
     body { font-family: Arial, sans-serif; margin: 0; padding: 0 16px; background-color: #fff; }
-    /* ... */
+    .header { background-color: #d40000; padding: 20px; text-align: center; color: white; position: relative; }
+    .header img { width: 80px; display: block; margin: 0 auto 10px; }
+    .cart-icon { position: absolute; top: 20px; right: 20px; font-size: 24px; color: white; cursor: pointer; }
+    .cart-count { background-color: red; color: white; border-radius: 50%; padding: 2px 6px; font-size: 12px; position: absolute; top: -10px; right: -10px; }
+    .container { max-width: 500px; margin: 0 auto; text-align: center; padding-bottom: 20px; }
+    .btn { display: block; width: 100%; background-color: #d40000; color: white; padding: 12px; margin: 8px 0; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; }
+    .btn-green { background-color: #28a745; }
+    .btn:hover { opacity: 0.9; }
+    .btn:disabled { background-color: #ccc; }
+    .input-field { width: 100%; padding: 10px; margin: 10px 0; box-sizing: border-box; font-size: 16px; border: 1px solid #ccc; border-radius: 4px; }
+    .product-img { max-width: 200px; margin: 20px auto; display: block; }
+    .total-bar { background-color: #d40000; color: white; padding: 10px; text-align: center; font-weight: bold; margin-top: 20px; }
+    .big-font * { font-size: 20px !important; }
+    .cart-item { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ccc; padding: 8px 0; }
     .cart-item button { background: none; border: none; color: red; font-size: 20px; cursor: pointer; }
-    
-    /* NOVO CSS PARA OS BOTÕES DE AÇÃO DO PRODUTO */
-    .product-name-container {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 10px; /* Espaço entre o nome e os botões */
-    }
-    .product-actions button {
-        background: none;
-        border: none;
-        font-size: 20px;
-        cursor: pointer;
-        padding: 5px;
-    }
+    .quantity-selector button { background: none; border: none; color: red; font-size: 24px; font-weight: bold; cursor: pointer; width: 40px; }
+    .quantity-selector span { font-size: 20px; font-weight: bold; margin: 0 15px; }
+    .historico-item { background-color: #f9f9f9; border: 1px solid #ddd; border-radius: 8px; padding: 10px; margin-bottom: 10px; text-align: left; }
+    .historico-item strong { color: #d40000; }
+    .product-name-container { display: flex; align-items: center; justify-content: center; gap: 10px; }
+    .product-actions button { background: none; border: none; font-size: 20px; cursor: pointer; padding: 5px; }
   </style>
 </head>
 <body>
+  <div class="header">
+    <img src="https://i.imgur.com/dHOSups.png" alt="Scanlist Market Logo">
+    <h1 id="titulo">Scanlist Market</h1>
+    <div class="cart-icon" onclick="verCarrinho()">🛒<span class="cart-count" id="cartCount">0</span></div>
+  </div>
   <div class="container">
+    <div id="reader" style="width: 100%; margin-bottom: 10px;"></div>
+    <input id="codigoBarra" class="input-field" placeholder="Digite ou escaneie o código">
+    <button class="btn" onclick="buscarProduto()">🔍 Buscar Produto</button>
+    <button class="btn" onclick="escanearProduto()">📷 Escanear Produto</button>
+    <button class="btn" onclick="cadastrarProdutoManual()">📝 Cadastrar Produto Manualmente</button>
+    <button class="btn" onclick="verHistorico()">📄 Ver Histórico</button>
+    <button class="btn" onclick="mudarIdioma()">🌐 Mudar Idioma PT/EN</button>
+    <button class="btn" onclick="toggleAcessibilidade()">🧓 Acessibilidade</button>
     <div id="produto-info" style="display:none; text-align: center;">
       <img id="produto-imagem" class="product-img" src="" alt="Imagem do Produto">
-      
       <div class="product-name-container">
           <input id="produto-nome" type="text" class="input-field" placeholder="Nome do produto" style="flex-grow: 1;"/>
           <div id="product-actions-wrapper" class="product-actions" style="display: none;">
@@ -40,76 +55,208 @@
           </div>
       </div>
       <input id="preco-unitario" type="number" class="input-field" placeholder="Preço unitário">
+      <p style="margin-top:15px; margin-bottom: 5px; font-weight: bold;">Quantidade:</p>
+      <div class="quantity-selector" style="display: flex; align-items: center; justify-content: center; margin-bottom: 15px;">
+          <button type="button" onclick="alterarQuantidade(-1)">-</button>
+          <span id="quantidade-display">1</span>
+          <button type="button" onclick="alterarQuantidade(1)">+</button>
+      </div>
+      <input type="hidden" id="quantidade" value="1"> 
       <button class="btn" onclick="adicionarAoCarrinho()">➕ Adicionar ao Carrinho</button>
     </div>
+    <div id="carrinhoDetalhado" style="display:none; margin-top: 20px;"></div>
+    <div id="historicoContainer" style="margin-top: 20px;"></div>
+    <div class="total-bar" id="totalBar" style="display: none;"></div>
+    <button id="finalizarBtn" class="btn btn-green" style="display: none;" onclick="finalizarCompra()">🛒 Finalizar Compra</button>
+    <p style="margin-top: 24px; font-size: 14px;">Apoie o projeto 💖<br>Pix: <strong>biedomingues33@gmail.com</strong></p>
+    <div style="margin-top: 10px;">
+      <form action="https://www.paypal.com/donate" method="post" target="_blank">
+        <input type="hidden" name="business" value="biedomingues33@gmail.com">
+        <input type="hidden" name="currency_code" value="USD"><input type="hidden" name="amount" value="4.99">
+        <input type="submit" value="Doar via PayPal (US$4.99)" class="btn">
+      </form>
     </div>
+  </div>
 
   <script type="module">
-    // MUDANÇA: Importando mais ferramentas do Firestore
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
     import { getAuth } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
-    import { getFirestore, doc, updateDoc, serverTimestamp, collection, addDoc, query, getDocs, orderBy } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+    import { getFirestore, doc, updateDoc, collection, addDoc, serverTimestamp, query, getDocs, orderBy } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 
-    // ... sua firebaseConfig com a apiKey ...
-    
-    // --- SCRIPT PRINCIPAL ---
+    const firebaseConfig = {
+      apiKey: "AIzaSyCtke_2T3e0HDDMqJsfJsRGs5KcKtN3Xe8",
+      authDomain: "scanlistmarket-30143.firebaseapp.com",
+      projectId: "scanlistmarket-30143",
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
     let cart = [];
-    let barcodeAtual = null; // NOVA VARIÁVEL GLOBAL para guardar o código de barras do produto em tela
+    let barcodeAtual = null;
 
-    // --- FUNÇÕES DO APP ---
-    
-    // FUNÇÃO "buscarProduto" ATUALIZADA
+    window.alterarQuantidade = function(delta) {
+        const qtyInput = document.getElementById("quantidade");
+        const qtyDisplay = document.getElementById("quantidade-display");
+        let novaQty = parseInt(qtyInput.value) + delta;
+        if (novaQty < 1) novaQty = 1;
+        qtyInput.value = novaQty;
+        qtyDisplay.innerText = novaQty;
+    };
+
+    function limparCarrinhoUI() {
+        cart = [];
+        document.getElementById("cartCount").innerText = '0';
+        document.getElementById("totalBar").style.display = 'none';
+        document.getElementById("carrinhoDetalhado").innerHTML = '';
+        document.getElementById("carrinhoDetalhado").style.display = 'none';
+        document.getElementById("finalizarBtn").style.display = 'none';
+    }
+
+    window.finalizarCompra = async function() {
+        if (cart.length === 0) return alert("Carrinho vazio!");
+        const user = auth.currentUser;
+        if (!user) return alert("Faça login para salvar o histórico.");
+        const btn = document.getElementById('finalizarBtn');
+        btn.disabled = true;
+        btn.innerText = "Salvando...";
+        try {
+            const compra = { userId: user.uid, data: serverTimestamp(), itens: cart, total: cart.reduce((acc, p) => acc + p.total, 0) };
+            await addDoc(collection(db, "compras", user.uid, "historico"), compra);
+            alert("Compra salva no histórico!");
+            limparCarrinhoUI();
+        } catch (e) {
+            console.error("Erro ao salvar compra: ", e);
+            alert("Erro ao salvar compra.");
+        } finally {
+            btn.disabled = false;
+            btn.innerText = "🛒 Finalizar Compra";
+        }
+    };
+
+    window.adicionarAoCarrinho = function() {
+      const nome = document.getElementById("produto-nome").value;
+      const preco = parseFloat(document.getElementById("preco-unitario").value.replace(",", ".")) || 0;
+      const quantidade = parseInt(document.getElementById("quantidade").value) || 1;
+      if (!nome || preco <= 0) return alert("Preencha nome e preço.");
+      cart.push({ nome, preco, quantidade, total: preco * quantidade });
+      document.getElementById("cartCount").innerText = cart.length;
+      document.getElementById("produto-info").style.display = "none";
+      document.getElementById("totalBar").innerText = `Total: R$ ${cart.reduce((acc, p) => acc + p.total, 0).toFixed(2).replace(".", ",")}`;
+      document.getElementById("totalBar").style.display = "block";
+      document.getElementById("codigoBarra").value = "";
+      document.getElementById("finalizarBtn").style.display = "block";
+    };
+
+    window.removerItem = function(index) {
+      cart.splice(index, 1);
+      document.getElementById("cartCount").innerText = cart.length;
+      window.verCarrinho();
+      if (cart.length > 0) {
+        document.getElementById("totalBar").innerText = `Total: R$ ${cart.reduce((acc, p) => acc + p.total, 0).toFixed(2).replace(".", ",")}`;
+      } else {
+        limparCarrinhoUI();
+      }
+    };
+
+    window.verCarrinho = function() {
+      const container = document.getElementById("carrinhoDetalhado");
+      if (cart.length === 0) { container.style.display = "none"; return; }
+      let html = "<h3>Itens no Carrinho:</h3>";
+      cart.forEach((item, i) => {
+        html += `<div class='cart-item'><span>${item.nome} - R$ ${item.preco.toFixed(2).replace(".", ",")} x ${item.quantidade} = <strong>R$ ${item.total.toFixed(2).replace(".", ",")}</strong></span><button onclick='removerItem(${i})'>🗑</button></div>`;
+      });
+      container.innerHTML = html;
+      container.style.display = "block";
+    };
+
+    window.iniciarCadastroManual = function() {
+      barcodeAtual = null;
+      document.getElementById("produto-info").style.display = "block";
+      document.getElementById("product-actions-wrapper").style.display = "none";
+      document.getElementById("produto-imagem").src = "";
+      document.getElementById("produto-imagem").style.display = "none";
+      document.getElementById("produto-nome").value = "";
+      document.getElementById("preco-unitario").value = "";
+      document.getElementById("quantidade").value = "1";
+      document.getElementById("quantidade-display").innerText = "1";
+      document.getElementById("produto-nome").focus();
+    };
+
+    window.cadastrarProdutoManual = window.iniciarCadastroManual;
+
     window.buscarProduto = function() {
       const code = document.getElementById("codigoBarra").value.trim();
       if (!code) return alert("Digite um código de barras válido.");
-      
-      barcodeAtual = code; // Guarda o código de barras atual
-
+      barcodeAtual = code;
       fetch(`https://world.openfoodfacts.org/api/v0/product/${code}.json`)
         .then(res => res.json())
         .then(data => {
           if (data.status === 1 && data.product) {
-            // ... (código para preencher os campos) ...
-            document.getElementById("product-actions-wrapper").style.display = "flex"; // Mostra os botões de ação
-          } else { 
-            window.iniciarCadastroManual();
-            document.getElementById("product-actions-wrapper").style.display = "none"; // Esconde os botões no cadastro manual
-          }
+            const produto = data.product;
+            document.getElementById("produto-imagem").style.display = "block";
+            document.getElementById("produto-nome").value = produto.product_name || "";
+            document.getElementById("produto-imagem").src = produto.image_url || "";
+            document.getElementById("product-actions-wrapper").style.display = "flex";
+            document.getElementById("preco-unitario").focus();
+            document.getElementById("produto-info").style.display = "block";
+          } else { window.iniciarCadastroManual(); }
         })
         .catch(err => {
-          // ... (código do catch) ...
+          alert("Erro de conexão. Cadastre o produto manualmente.");
+          window.iniciarCadastroManual();
         });
     };
 
-    // NOVA FUNÇÃO para reportar um erro
-    window.reportarErro = async function() {
-        if (!barcodeAtual) {
-            return alert("Nenhum produto selecionado para reportar.");
-        }
-        if (!confirm("Tem certeza que deseja reportar um erro neste produto? Isso o marcará para revisão.")) {
-            return;
-        }
+    window.escanearProduto = function() {
+      const leitorHtml = document.getElementById('reader');
+      leitorHtml.style.display = 'block';
+      const html5QrCode = new Html5Qrcode("reader");
+      const onScanSuccess = (decodedText) => {
+          try { html5QrCode.stop(); } catch(err) {}
+          leitorHtml.style.display = 'none';
+          document.getElementById("codigoBarra").value = decodedText;
+          window.buscarProduto(); 
+      };
+      html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 150 } }, onScanSuccess, () => {});
+    };
 
+    window.verHistorico = async function() {
+        const user = auth.currentUser;
+        if (!user) return alert("Você precisa estar logado para ver seu histórico.");
+        const container = document.getElementById("historicoContainer");
+        container.innerHTML = "<h3>Buscando seu histórico...</h3>";
         try {
-            // Como ainda não temos um banco de dados público, vamos apenas simular o alerta
-            // No futuro, aqui iria o código para atualizar o produto no Firestore
-            // Ex: const productRef = doc(db, "produtos", barcodeAtual);
-            //     await updateDoc(productRef, { reportado: true });
-            alert(`Produto ${barcodeAtual} reportado com sucesso! Obrigado pela ajuda.`);
+            const q = query(collection(db, "compras", user.uid, "historico"), orderBy("data", "desc"));
+            const querySnapshot = await getDocs(q);
+            if (querySnapshot.empty) {
+                container.innerHTML = "<p>Nenhuma compra salva no histórico.</p>";
+                return;
+            }
+            let html = "<h2>Seu Histórico de Compras</h2>";
+            querySnapshot.forEach((doc) => {
+                const compra = doc.data();
+                const data = compra.data.toDate().toLocaleDateString('pt-BR');
+                html += `<div class="historico-item"><p><strong>Data:</strong> ${data}</p><p><strong>Total:</strong> R$ ${compra.total.toFixed(2).replace(".", ",")}</p></div>`;
+            });
+            container.innerHTML = html;
         } catch (e) {
-            console.error("Erro ao reportar: ", e);
-            alert("Não foi possível reportar o erro.");
+            console.error("Erro ao buscar histórico: ", e);
+            container.innerHTML = "<p>Erro ao buscar seu histórico.</p>";
         }
     };
 
-    // NOVA FUNÇÃO (placeholder) para editar
-    window.editarProduto = function() {
-        alert("Funcionalidade de editar em desenvolvimento! O próximo passo.");
+    window.editarProduto = function() { alert("Funcionalidade de editar em desenvolvimento!"); };
+    window.reportarErro = function() {
+        if (!barcodeAtual) return alert("Nenhum produto selecionado.");
+        if (confirm("Reportar erro neste produto?")) {
+            alert(`Produto ${barcodeAtual} reportado! Obrigado.`);
+        }
     };
 
-    // ... cole aqui TODAS as suas outras funções completas (adicionarAoCarrinho, etc.)
-    // ...
-    
+    window.mudarIdioma = function() { alert("Função de idioma em desenvolvimento!"); };
+    window.toggleAcessibilidade = function() { document.body.classList.toggle("big-font"); };
   </script>
 </body>
 </html>
