@@ -1,35 +1,10 @@
-<!<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Scanlist Market</title>
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
-    import { getAuth } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
-    import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
-
-    // ATENÇÃO: COLOQUE SUA CHAVE DE API E DADOS DO FIREBASE AQUI
-    const firebaseConfig = {
-      apiKey: "AIzaSyCtke_2T3e0HDDMqJsfJsRGs5KcKtN3Xe8",
-      authDomain: "scanlistmarket-30143.firebaseapp.com",
-      projectId: "scanlistmarket-30143",
-      // os outros dados como storageBucket, etc., podem ser incluídos se precisar
-    };
-
-    // Inicializando o Firebase e colocando os serviços na janela para serem usados globalmente
-    try {
-      const app = initializeApp(firebaseConfig);
-      window.auth = getAuth(app);
-      window.db = getFirestore(app);
-      window.firebase = { collection, addDoc, serverTimestamp };
-      console.log("Firebase inicializado com sucesso!");
-    } catch (e) {
-      console.error("Erro ao inicializar o Firebase", e);
-      alert("Erro na configuração do Firebase. Verifique seus dados de configuração.");
-    }
-  </script>
   <style>
     body { font-family: Arial, sans-serif; margin: 0; padding: 0 16px; background-color: #fff; }
     .header { background-color: #d40000; padding: 20px; text-align: center; color: white; position: relative; }
@@ -47,6 +22,8 @@
     .big-font * { font-size: 20px !important; }
     .cart-item { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ccc; padding: 8px 0; }
     .cart-item button { background: none; border: none; color: red; font-size: 20px; cursor: pointer; }
+    .quantity-selector button { background: none; border: none; color: red; font-size: 24px; font-weight: bold; cursor: pointer; width: 40px; }
+    .quantity-selector span { font-size: 20px; font-weight: bold; margin: 0 15px; }
   </style>
 </head>
 <body>
@@ -70,7 +47,13 @@
       <img id="produto-imagem" class="product-img" src="" alt="Imagem do Produto">
       <input id="produto-nome" type="text" class="input-field" placeholder="Nome do produto" />
       <input id="preco-unitario" type="number" class="input-field" placeholder="Preço unitário">
-      <input id="quantidade" class="input-field" placeholder="Quantidade" type="number" min="1" value="1">
+      <p style="margin-top:15px; margin-bottom: 5px; font-weight: bold;">Quantidade:</p>
+      <div class="quantity-selector" style="display: flex; align-items: center; justify-content: center; margin-bottom: 15px;">
+          <button type="button" onclick="alterarQuantidade(-1)">-</button>
+          <span id="quantidade-display">1</span>
+          <button type="button" onclick="alterarQuantidade(1)">+</button>
+      </div>
+      <input type="hidden" id="quantidade" value="1"> 
       <button class="btn" onclick="adicionarAoCarrinho()">➕ Adicionar ao Carrinho</button>
     </div>
     <div id="carrinhoDetalhado" style="display:none; margin-top: 20px;"></div>
@@ -79,11 +62,38 @@
     <button id="finalizarBtn" class="btn btn-green" style="display: none;" onclick="finalizarCompra()">🛒 Finalizar Compra</button>
     </div>
 
-  <script>
+  <script type="module">
+    // Importando os scripts do Firebase
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
+    import { getAuth } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
+    import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+
+    // ATENÇÃO: COLOQUE SUA CHAVE DE API E DADOS DO FIREBASE AQUI
+    const firebaseConfig = {
+      apiKey: "AIzaSyCtke_2T3e0HDDMqJsfJsRGs5KcKtN3Xe8",
+      authDomain: "scanlistmarket-30143.firebaseapp.com",
+      projectId: "scanlistmarket-30143",
+    };
+
+    // Inicializando o Firebase
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
     // --- SCRIPT PRINCIPAL ---
     let cart = [];
-    let idioma = "pt";
-    // ... seu dicionário de idiomas ...
+    const dicionario = { /* seu dicionário de idiomas aqui */ };
+
+    // --- FUNÇÕES DO APP (agora todas públicas) ---
+    
+    window.alterarQuantidade = function(delta) {
+        const quantidadeInput = document.getElementById("quantidade");
+        const quantidadeDisplay = document.getElementById("quantidade-display");
+        let novaQuantidade = parseInt(quantidadeInput.value) + delta;
+        if (novaQuantidade < 1) novaQuantidade = 1;
+        quantidadeInput.value = novaQuantidade;
+        quantidadeDisplay.innerText = novaQuantidade;
+    };
 
     function limparCarrinhoUI() {
         cart = [];
@@ -93,108 +103,124 @@
         document.getElementById("carrinhoDetalhado").style.display = 'none';
         document.getElementById("finalizarBtn").style.display = 'none';
     }
-    
-    // NOVA FUNÇÃO para finalizar a compra
-    async function finalizarCompra() {
-        if (cart.length === 0) {
-            alert("Seu carrinho está vazio!");
-            return;
-        }
 
-        const user = window.auth.currentUser;
-        if (!user) {
-            alert("Você precisa estar logado para salvar seu histórico. Por favor, faça o login novamente.");
-            // Opcional: redirecionar para a página de login
-            // window.location.href = 'index.html';
-            return;
-        }
+    window.finalizarCompra = async function() {
+        if (cart.length === 0) return alert("Seu carrinho está vazio!");
+        const user = auth.currentUser;
+        if (!user) return alert("Você precisa estar logado para salvar seu histórico.");
 
         const finalizarBtn = document.getElementById('finalizarBtn');
         finalizarBtn.disabled = true;
         finalizarBtn.innerText = "Salvando...";
 
         try {
-            const compra = {
-                userId: user.uid,
-                data: window.firebase.serverTimestamp(),
-                itens: cart,
-                total: cart.reduce((acc, p) => acc + p.total, 0)
-            };
-
-            const docRef = await window.firebase.addDoc(
-                window.firebase.collection(window.db, "compras", user.uid, "historico"),
-                compra
-            );
-            
+            const compra = { userId: user.uid, data: serverTimestamp(), itens: cart, total: cart.reduce((acc, p) => acc + p.total, 0) };
+            await addDoc(collection(db, "compras", user.uid, "historico"), compra);
             alert("Compra salva com sucesso no seu histórico!");
             limparCarrinhoUI();
-
         } catch (e) {
             console.error("Erro ao salvar a compra: ", e);
-            alert("Ocorreu um erro ao salvar sua compra. Tente novamente.");
+            alert("Ocorreu um erro ao salvar sua compra.");
         } finally {
             finalizarBtn.disabled = false;
             finalizarBtn.innerText = "🛒 Finalizar Compra";
         }
-    }
+    };
 
-    window.adicionarAoCarrinho = () => {
+    window.adicionarAoCarrinho = function() {
       const nome = document.getElementById("produto-nome").value;
       const preco = parseFloat(document.getElementById("preco-unitario").value.replace(",", ".")) || 0;
       const quantidade = parseInt(document.getElementById("quantidade").value) || 1;
+      if (!nome || preco <= 0 || quantidade <= 0) return alert("Preencha corretamente nome, preço e quantidade.");
 
-      if (!nome || preco <= 0 || quantidade <= 0) {
-        alert("Preencha corretamente o nome, preço e quantidade.");
-        return;
-      }
-
-      const total = preco * quantidade;
-      cart.push({ nome, preco, quantidade, total });
-
+      cart.push({ nome, preco, quantidade, total: preco * quantidade });
       document.getElementById("cartCount").innerText = cart.length;
       document.getElementById("produto-info").style.display = "none";
       document.getElementById("totalBar").innerText = `Total: R$ ${cart.reduce((acc, p) => acc + p.total, 0).toFixed(2).replace(".", ",")}`;
       document.getElementById("totalBar").style.display = "block";
       document.getElementById("codigoBarra").value = "";
-      
-      // Mostra o botão de finalizar compra
       document.getElementById("finalizarBtn").style.display = "block";
     };
     
-    window.removerItem = (index) => {
+    window.removerItem = function(index) {
       cart.splice(index, 1);
       document.getElementById("cartCount").innerText = cart.length;
-      verCarrinho(); // Atualiza a visualização do carrinho
+      window.verCarrinho();
       
       if (cart.length > 0) {
           document.getElementById("totalBar").innerText = `Total: R$ ${cart.reduce((acc, p) => acc + p.total, 0).toFixed(2).replace(".", ",")}`;
       } else {
-          document.getElementById("totalBar").style.display = "none";
-          document.getElementById("carrinhoDetalhado").style.display = "none";
-          document.getElementById("finalizarBtn").style.display = "none";
+          limparCarrinhoUI();
       }
     };
 
-    // Cole aqui suas outras funções: verCarrinho, buscarProduto, escanearProduto, etc.
-    // ...
-    // Exemplo da função verCarrinho
-    window.verCarrinho = () => {
+    window.verCarrinho = function() {
       const container = document.getElementById("carrinhoDetalhado");
-      if (cart.length === 0) {
-        container.style.display = "none";
-        return;
-      }
+      if (cart.length === 0) { container.style.display = "none"; return; }
       let html = "<h3>Itens no Carrinho:</h3>";
       cart.forEach((item, i) => {
-        html += `<div class='cart-item'>
-          <span>${item.nome} - R$ ${item.preco.toFixed(2).replace(".", ",")} x ${item.quantidade} = <strong>R$ ${item.total.toFixed(2).replace(".", ",")}</strong></span>
-          <button onclick='removerItem(${i})'>🗑</button>
-        </div>`;
+        html += `<div class='cart-item'><span>${item.nome} - R$ ${item.preco.toFixed(2).replace(".", ",")} x ${item.quantidade} = <strong>R$ ${item.total.toFixed(2).replace(".", ",")}</strong></span><button onclick='removerItem(${i})'>🗑</button></div>`;
       });
       container.innerHTML = html;
       container.style.display = "block";
     };
-    // ... e as outras ...
+
+    window.iniciarCadastroManual = function() {
+      document.getElementById("produto-info").style.display = "block";
+      document.getElementById("produto-imagem").src = "";
+      document.getElementById("produto-imagem").style.display = "none";
+      document.getElementById("produto-nome").value = "";
+      document.getElementById("preco-unitario").value = "";
+      document.getElementById("quantidade").value = "1";
+      document.getElementById("quantidade-display").innerText = "1";
+      document.getElementById("produto-nome").focus();
+    };
+
+    window.cadastrarProdutoManual = window.iniciarCadastroManual;
+
+    window.buscarProduto = function() {
+      const code = document.getElementById("codigoBarra").value.trim();
+      if (!code) return alert("Digite um código de barras válido.");
+      
+      fetch(`https://world.openfoodfacts.org/api/v0/product/${code}.json`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.status === 1 && data.product) {
+            const produto = data.product;
+            document.getElementById("produto-imagem").style.display = "block";
+            document.getElementById("produto-nome").value = produto.product_name || "";
+            document.getElementById("produto-imagem").src = produto.image_url || "";
+            document.getElementById("preco-unitario").focus();
+            document.getElementById("produto-info").style.display = "block";
+          } else { window.iniciarCadastroManual(); }
+        })
+        .catch(err => {
+          alert("Erro de conexão. Por favor, cadastre o produto manualmente.");
+          window.iniciarCadastroManual();
+        });
+    };
+    
+    window.escanearProduto = function() {
+      const leitorHtml = document.getElementById('reader');
+      leitorHtml.style.display = 'block';
+      const html5QrCode = new Html5Qrcode("reader");
+      const onScanSuccess = (decodedText) => {
+          try {
+              html5QrCode.stop();
+          } catch(err) {
+              // ignora o erro se o scanner já foi parado
+          }
+          leitorHtml.style.display = 'none';
+          document.getElementById("codigoBarra").value = decodedText;
+          window.buscarProduto(); 
+      };
+      html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 150 } }, onScanSuccess, () => {});
+    };
+
+    // Funções placeholder
+    window.verHistorico = function() { alert("Função de ver histórico em desenvolvimento!"); };
+    window.mudarIdioma = function() { alert("Função de idioma em desenvolvimento!"); };
+    window.toggleAcessibilidade = function() { document.body.classList.toggle("big-font"); };
 
   </script>
 </body>
