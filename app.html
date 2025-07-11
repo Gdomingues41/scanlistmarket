@@ -11,7 +11,7 @@
     .header img { width: 80px; display: block; margin: 0 auto 10px; }
     .cart-icon { position: absolute; top: 20px; right: 20px; font-size: 24px; color: white; cursor: pointer; }
     .cart-count { background-color: red; color: white; border-radius: 50%; padding: 2px 6px; font-size: 12px; position: absolute; top: -10px; right: -10px; }
-    .container { max-width: 500px; margin: 0 auto; text-align: center; padding-bottom: 20px; }
+    .container { max-width: 500px; margin: 0 auto; text-align: center; padding-bottom: 20px; visibility: hidden; /* Começa escondido */ }
     .btn { display: block; width: 100%; background-color: #d40000; color: white; padding: 12px; margin: 8px 0; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; }
     .btn-green { background-color: #28a745; }
     .btn:hover { opacity: 0.9; }
@@ -28,14 +28,58 @@
     .historico-item strong { color: #d40000; }
     .product-name-container { display: flex; align-items: center; justify-content: center; gap: 10px; }
     .product-actions button { background: none; border: none; font-size: 20px; cursor: pointer; padding: 5px; }
-    .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); display: flex; justify-content: center; align-items: center; z-index: 1000; font-size: 20px; font-weight: bold; }
+    .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #fff; display: flex; justify-content: center; align-items: center; z-index: 1000; font-size: 20px; font-weight: bold; color: #d40000; }
   </style>
 </head>
 <body>
   <div id="loading" class="loading-overlay">Verificando login...</div>
 
-  <div class="header"> ... </div>
-  <div class="container"> ... </div>
+  <div class="header">
+    <img src="https://i.imgur.com/dHOSups.png" alt="Scanlist Market Logo">
+    <h1 id="titulo">Scanlist Market</h1>
+    <div class="cart-icon" onclick="verCarrinho()">🛒<span class="cart-count" id="cartCount">0</span></div>
+  </div>
+  <div class="container">
+    <div id="reader" style="width: 100%; margin-bottom: 10px;"></div>
+    <input id="codigoBarra" class="input-field" placeholder="Digite ou escaneie o código">
+    <button class="btn" onclick="buscarProduto()">🔍 Buscar Produto</button>
+    <button class="btn" onclick="escanearProduto()">📷 Escanear Produto</button>
+    <button class="btn" onclick="cadastrarProdutoManual()">📝 Cadastrar Produto Manualmente</button>
+    <button class="btn" onclick="verHistorico()">📄 Ver Histórico</button>
+    <button class="btn" onclick="mudarIdioma()">🌐 Mudar Idioma PT/EN</button>
+    <button class="btn" onclick="toggleAcessibilidade()">🧓 Acessibilidade</button>
+    <div id="produto-info" style="display:none; text-align: center;">
+      <img id="produto-imagem" class="product-img" src="" alt="Imagem do Produto">
+      <div class="product-name-container">
+          <input id="produto-nome" type="text" class="input-field" placeholder="Nome do produto" style="flex-grow: 1;"/>
+          <div id="product-actions-wrapper" class="product-actions" style="display: none;">
+              <button onclick="editarProduto()" title="Editar/Corrigir nome">✏️</button>
+              <button onclick="reportarErro()" title="Reportar erro">🚩</button>
+          </div>
+      </div>
+      <input id="preco-unitario" type="number" class="input-field" placeholder="Preço unitário">
+      <p style="margin-top:15px; margin-bottom: 5px; font-weight: bold;">Quantidade:</p>
+      <div class="quantity-selector" style="display: flex; align-items: center; justify-content: center; margin-bottom: 15px;">
+          <button type="button" onclick="alterarQuantidade(-1)">-</button>
+          <span id="quantidade-display">1</span>
+          <button type="button" onclick="alterarQuantidade(1)">+</button>
+      </div>
+      <input type="hidden" id="quantidade" value="1"> 
+      <button class="btn" onclick="adicionarAoCarrinho()">➕ Adicionar ao Carrinho</button>
+    </div>
+    <div id="carrinhoDetalhado" style="display:none; margin-top: 20px;"></div>
+    <div id="historicoContainer" style="margin-top: 20px;"></div>
+    <div class="total-bar" id="totalBar" style="display: none;"></div>
+    <button id="finalizarBtn" class="btn btn-green" style="display: none;" onclick="finalizarCompra()">🛒 Finalizar Compra</button>
+    <p style="margin-top: 24px; font-size: 14px;">Apoie o projeto 💖<br>Pix: <strong>biedomingues33@gmail.com</strong></p>
+    <div style="margin-top: 10px;">
+      <form action="https://www.paypal.com/donate" method="post" target="_blank">
+        <input type="hidden" name="business" value="biedomingues33@gmail.com">
+        <input type="hidden" name="currency_code" value="USD"><input type="hidden" name="amount" value="4.99">
+        <input type="submit" value="Doar via PayPal (US$4.99)" class="btn">
+      </form>
+    </div>
+  </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
@@ -43,7 +87,7 @@
     import { getFirestore, doc, getDoc, setDoc, collection, addDoc, serverTimestamp, query, getDocs, orderBy } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 
     const firebaseConfig = {
-      apiKey: "AIzaSyCtke_2T3e0HDDMqJsfJsRGs5KcKtN3Xe8",
+      apiKey: "SUA_API_KEY_AQUI",
       authDomain: "scanlistmarket-30143.firebaseapp.com",
       projectId: "scanlistmarket-30143",
     };
@@ -52,35 +96,205 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    // O "VIGIA" DO LOGIN
     onAuthStateChanged(auth, (user) => {
       const loadingOverlay = document.getElementById('loading');
+      const container = document.querySelector('.container');
       
       if (user) {
-        // --- O USUÁRIO ESTÁ LOGADO ---
-        console.log("Usuário verificado:", user.uid);
-        loadingOverlay.style.display = 'none'; // Esconde o "carregando"
+        // --- USUÁRIO ESTÁ LOGADO ---
+        loadingOverlay.style.display = 'none';
+        container.style.visibility = 'visible';
 
-        // Variáveis e funções do app só são definidas DEPOIS que o login é confirmado
         let cart = [];
         let barcodeAtual = null;
 
-        // ... todas as suas funções (buscarProduto, finalizarCompra, etc.) coladas aqui
-        // e atribuídas à window
-        // Exemplo:
-        window.buscarProduto = async function() {
-          // ... lógica da função ...
+        function limparCarrinhoUI() {
+            cart = [];
+            document.getElementById("cartCount").innerText = '0';
+            document.getElementById("totalBar").style.display = 'none';
+            document.getElementById("carrinhoDetalhado").innerHTML = '';
+            document.getElementById("carrinhoDetalhado").style.display = 'none';
+            document.getElementById("finalizarBtn").style.display = 'none';
+        }
+
+        window.alterarQuantidade = function(delta) {
+            const qtyInput = document.getElementById("quantidade");
+            const qtyDisplay = document.getElementById("quantidade-display");
+            let novaQty = parseInt(qtyInput.value) + delta;
+            if (novaQty < 1) novaQty = 1;
+            qtyInput.value = novaQty;
+            qtyDisplay.innerText = novaQty;
         };
-        // E assim por diante para TODAS as outras...
+
+        window.finalizarCompra = async function() {
+            if (cart.length === 0) return alert("Carrinho vazio!");
+            const btn = document.getElementById('finalizarBtn');
+            btn.disabled = true; btn.innerText = "Salvando...";
+            try {
+                const compra = { userId: user.uid, data: serverTimestamp(), itens: cart, total: cart.reduce((acc, p) => acc + p.total, 0) };
+                await addDoc(collection(db, "compras", user.uid, "historico"), compra);
+                alert("Compra salva no histórico!");
+                limparCarrinhoUI();
+            } catch (e) {
+                console.error("Erro ao salvar compra: ", e);
+                alert("Erro ao salvar compra.");
+            } finally {
+                btn.disabled = false; btn.innerText = "🛒 Finalizar Compra";
+            }
+        };
+
+        window.adicionarAoCarrinho = function() {
+            const nome = document.getElementById("produto-nome").value;
+            const preco = parseFloat(document.getElementById("preco-unitario").value.replace(",", ".")) || 0;
+            const quantidade = parseInt(document.getElementById("quantidade").value) || 1;
+            if (!nome || preco <= 0) return alert("Preencha nome e preço.");
+            cart.push({ nome, preco, quantidade, total: preco * quantidade });
+            document.getElementById("cartCount").innerText = cart.length;
+            document.getElementById("produto-info").style.display = "none";
+            document.getElementById("totalBar").innerText = `Total: R$ ${cart.reduce((acc, p) => acc + p.total, 0).toFixed(2).replace(".", ",")}`;
+            document.getElementById("totalBar").style.display = "block";
+            document.getElementById("codigoBarra").value = "";
+            document.getElementById("finalizarBtn").style.display = "block";
+        };
+        
+        window.removerItem = function(index) {
+            cart.splice(index, 1);
+            document.getElementById("cartCount").innerText = cart.length;
+            window.verCarrinho();
+            if (cart.length > 0) {
+                document.getElementById("totalBar").innerText = `Total: R$ ${cart.reduce((acc, p) => acc + p.total, 0).toFixed(2).replace(".", ",")}`;
+            } else {
+                limparCarrinhoUI();
+            }
+        };
+
+        window.verCarrinho = function() {
+            const container = document.getElementById("carrinhoDetalhado");
+            if (cart.length === 0) { container.style.display = "none"; return; }
+            let html = "<h3>Itens no Carrinho:</h3>";
+            cart.forEach((item, i) => {
+                html += `<div class='cart-item'><span>${item.nome} - R$ ${item.preco.toFixed(2).replace(".", ",")} x ${item.quantidade} = <strong>R$ ${item.total.toFixed(2).replace(".", ",")}</strong></span><button onclick='removerItem(${i})'>🗑</button></div>`;
+            });
+            container.innerHTML = html;
+            container.style.display = "block";
+        };
+
+        window.iniciarCadastroManual = function(buscando = false) {
+            barcodeAtual = buscando ? barcodeAtual : null;
+            document.getElementById("produto-info").style.display = "block";
+            document.getElementById("product-actions-wrapper").style.display = "none";
+            document.getElementById("produto-imagem").src = "";
+            document.getElementById("produto-imagem").style.display = "block";
+            document.getElementById("produto-nome").value = buscando ? "Buscando produto..." : "";
+            document.getElementById("preco-unitario").value = "";
+            document.getElementById("quantidade").value = "1";
+            document.getElementById("quantidade-display").innerText = "1";
+            if (!buscando) document.getElementById("produto-nome").focus();
+        };
+
+        window.cadastrarProdutoManual = () => window.iniciarCadastroManual(false);
+
+        window.buscarProduto = async function() {
+            const code = document.getElementById("codigoBarra").value.trim();
+            if (!code) return alert("Digite um código de barras válido.");
+            barcodeAtual = code;
+            window.iniciarCadastroManual(true);
+            if (user) {
+                const correcaoRef = doc(db, "usuarios", user.uid, "correcoes", code);
+                const docSnap = await getDoc(correcaoRef);
+                if (docSnap.exists()) {
+                    document.getElementById("produto-nome").value = docSnap.data().nome;
+                    document.getElementById("product-actions-wrapper").style.display = "flex";
+                    document.getElementById("preco-unitario").focus();
+                    return;
+                }
+            }
+            fetch(`https://world.openfoodfacts.org/api/v0/product/${code}.json`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 1 && data.product) {
+                        const produto = data.product;
+                        document.getElementById("produto-nome").value = produto.product_name || "";
+                        document.getElementById("produto-imagem").src = produto.image_url || "";
+                        document.getElementById("product-actions-wrapper").style.display = "flex";
+                    } else { window.iniciarCadastroManual(false); }
+                })
+                .catch(err => {
+                    alert("Erro de conexão. Cadastre o produto manualmente.");
+                    window.iniciarCadastroManual(false);
+                });
+        };
+        
+        window.escanearProduto = function() {
+            const leitorHtml = document.getElementById('reader');
+            leitorHtml.style.display = 'block';
+            const html5QrCode = new Html5Qrcode("reader");
+            const onScanSuccess = (decodedText) => {
+                try { html5QrCode.stop(); } catch(err) {}
+                leitorHtml.style.display = 'none';
+                document.getElementById("codigoBarra").value = decodedText;
+                window.buscarProduto(); 
+            };
+            html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 150 } }, onScanSuccess, () => {});
+        };
+
+        window.verHistorico = async function() {
+            const container = document.getElementById("historicoContainer");
+            container.innerHTML = "<h3>Buscando seu histórico...</h3>";
+            try {
+                const q = query(collection(db, "compras", user.uid, "historico"), orderBy("data", "desc"));
+                const querySnapshot = await getDocs(q);
+                if (querySnapshot.empty) {
+                    container.innerHTML = "<p>Nenhuma compra salva no histórico.</p>"; return;
+                }
+                let html = "<h2>Seu Histórico de Compras</h2>";
+                querySnapshot.forEach((doc) => {
+                    const compra = doc.data();
+                    const data = compra.data.toDate().toLocaleDateString('pt-BR');
+                    html += `<div class="historico-item"><p><strong>Data:</strong> ${data}</p><p><strong>Total:</strong> R$ ${compra.total.toFixed(2).replace(".", ",")}</p></div>`;
+                });
+                container.innerHTML = html;
+            } catch (e) {
+                console.error("Erro ao buscar histórico: ", e);
+                container.innerHTML = "<p>Erro ao buscar seu histórico.</p>";
+            }
+        };
+
+        window.editarProduto = async function() {
+            if (!barcodeAtual) return alert("Nenhum produto selecionado para editar.");
+            const nomeInput = document.getElementById("produto-nome");
+            const nomeAtual = nomeInput.value;
+            const nomeCorrigido = prompt("Digite o nome correto para este produto:", nomeAtual);
+            if (nomeCorrigido && nomeCorrigido.trim() !== "" && nomeCorrigido.trim() !== nomeAtual) {
+                try {
+                    const correcaoRef = doc(db, "usuarios", user.uid, "correcoes", barcodeAtual);
+                    await setDoc(correcaoRef, { nome: nomeCorrigido.trim() });
+                    nomeInput.value = nomeCorrigido.trim();
+                    alert("Sua correção pessoal foi salva com sucesso!");
+                } catch (e) {
+                    console.error("Erro ao salvar correção: ", e);
+                    alert("Ocorreu um erro ao salvar sua correção.");
+                }
+            }
+        };
+        
+        window.reportarErro = function() {
+            if (!barcodeAtual) return alert("Nenhum produto selecionado.");
+            if (confirm("Reportar um erro neste produto?")) {
+                alert(`Produto ${barcodeAtual} reportado! Obrigado.`);
+            }
+        };
+
+        window.mudarIdioma = function() { alert("Função de idioma em desenvolvimento!"); };
+        window.toggleAcessibilidade = function() { document.body.classList.toggle("big-font"); };
 
       } else {
-        // --- O USUÁRIO NÃO ESTÁ LOGADO ---
-        console.log("Nenhum usuário logado. Redirecionando...");
+        // --- USUÁRIO NÃO ESTÁ LOGADO ---
+        loadingOverlay.style.display = 'none';
         alert("Sessão expirada ou usuário não logado. Redirecionando para a página de login.");
-        window.location.href = 'index.html'; // "Expulsa" o usuário para a tela de login
+        window.location.href = 'index.html';
       }
     });
-
   </script>
 </body>
 </html>
