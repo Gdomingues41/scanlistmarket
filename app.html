@@ -126,10 +126,10 @@
         
         const dicionario = {
             pt: {
-                titulo: "Scanlist Market", placeholderCodigo: "Digite ou escaneie o código", btnBuscar: "🔍 Buscar Produto", btnEscanear: "📷 Escanear Produto", btnCadastrarManual: "📝 Cadastrar Produto Manualmente", menuVerHistorico: "📄 Ver Histórico", menuAcessibilidade: "🧓 Acessibilidade", menuMudarIdioma: "🌐 Mudar Idioma", menuSair: "🚪 Sair (Logout)", produtoPlaceholder: "Nome do produto", precoPlaceholder: "Preço unitário", qtdLabel: "Quantidade:", btnAddCarrinho: "➕ Adicionar ao Carrinho", btnFinalizarCompra: "🛒 Finalizar Compra"
+                titulo: "Scanlist Market", placeholderCodigo: "Digite ou escaneie o código", btnBuscar: "🔍 Buscar Produto", btnEscanear: "📷 Escanear Produto", btnCadastrarManual: "📝 Cadastrar Produto Manualmente", menuVerHistorico: "📄 Ver Histórico", menuAcessibilidade: "🧓 Acessibilidade", menuMudarIdioma: "🌐 Mudar Idioma", menuSair: "🚪 Sair (Logout)", produtoPlaceholder: "Nome do produto", precoPlaceholder: "Preço unitário", qtdLabel: "Quantidade:", btnAddCarrinho: "➕ Adicionar ao Carrinho", btnFinalizarCompra: "🛒 Finalizar Compra", fechar: "Fechar"
             },
             en: {
-                titulo: "Scanlist Market", placeholderCodigo: "Type or scan the code", btnBuscar: "🔍 Search Product", btnEscanear: "📷 Scan Product", btnCadastrarManual: "📝 Manual Product Entry", menuVerHistorico: "📄 View History", menuAcessibilidade: "🧓 Accessibility", menuMudarIdioma: "🌐 Switch Language", menuSair: "🚪 Logout", produtoPlaceholder: "Product name", precoPlaceholder: "Unit price", qtdLabel: "Quantity:", btnAddCarrinho: "➕ Add to Cart", btnFinalizarCompra: "🛒 Finish Purchase"
+                titulo: "Scanlist Market", placeholderCodigo: "Type or scan the code", btnBuscar: "🔍 Search Product", btnEscanear: "📷 Scan Product", btnCadastrarManual: "📝 Manual Product Entry", menuVerHistorico: "📄 View History", menuAcessibilidade: "🧓 Accessibility", menuMudarIdioma: "🌐 Switch Language", menuSair: "🚪 Logout", produtoPlaceholder: "Product name", precoPlaceholder: "Unit price", qtdLabel: "Quantity:", btnAddCarrinho: "➕ Add to Cart", btnFinalizarCompra: "🛒 Finish Purchase", fechar: "Close"
             }
         };
         
@@ -159,14 +159,19 @@
         window.logout = function() { if (confirm("Tem certeza que deseja sair?")) { signOut(auth).then(() => { window.location.href = 'index.html'; }); } }
         window.toggleAcessibilidade = function() { document.body.classList.toggle("big-font"); window.fecharMenu(); };
         window.mudarIdioma = function() { idioma = (idioma === 'pt') ? 'en' : 'pt'; localStorage.setItem('scanlistMarketIdioma', idioma); atualizarTextos(); window.fecharMenu(); };
+        
         window.fecharHistorico = function() { document.getElementById("historicoContainer").innerHTML = ""; }
+        window.fecharCarrinho = function() {
+            const container = document.getElementById("carrinhoDetalhado");
+            container.innerHTML = "";
+            container.style.display = "none";
+        }
 
         function limparCarrinhoUI() {
             cart = [];
             document.getElementById("cartCount").innerText = '0';
             document.getElementById("totalBar").style.display = 'none';
-            document.getElementById("carrinhoDetalhado").innerHTML = '';
-            document.getElementById("carrinhoDetalhado").style.display = 'none';
+            window.fecharCarrinho();
             document.getElementById("finalizarBtn").style.display = 'none';
         }
 
@@ -189,7 +194,7 @@
                 alert("Compra salva no histórico!");
                 limparCarrinhoUI();
             } catch (e) { console.error("Erro ao salvar compra: ", e); alert("Erro ao salvar compra."); }
-            finally { btn.disabled = false; atualizarTextos(); /* restaura texto do botão */ }
+            finally { btn.disabled = false; atualizarTextos(); }
         };
 
         window.adicionarAoCarrinho = function() {
@@ -220,13 +225,14 @@
         window.verCarrinho = function() {
             window.fecharHistorico();
             const container = document.getElementById("carrinhoDetalhado");
-            if (cart.length === 0) { container.style.display = "none"; return; }
-            let html = "<h3>Itens no Carrinho:</h3>";
+            if (cart.length === 0) return;
+            const lang = dicionario[idioma];
+            let html = `<h3>Itens no Carrinho <button onclick="fecharCarrinho()" style="font-size: 14px; cursor: pointer; float: right;">${lang.fechar}</button></h3>`;
             cart.forEach((item, i) => {
                 html += `<div class='cart-item'><span>${item.nome} - R$ ${item.preco.toFixed(2).replace(".", ",")} x ${item.quantidade} = <strong>R$ ${item.total.toFixed(2).replace(".", ",")}</strong></span><button onclick='removerItem(${i})'>🗑</button></div>`;
             });
             container.innerHTML = html;
-            container.style.display = "block";
+            container.style.display = 'block';
         };
 
         window.iniciarCadastroManual = function(buscando = false) {
@@ -289,17 +295,18 @@
         };
 
         window.verHistorico = async function() {
-            document.getElementById("carrinhoDetalhado").style.display = 'none';
+            window.fecharCarrinho();
             window.fecharMenu();
             const container = document.getElementById("historicoContainer");
             container.innerHTML = "<h3>Buscando seu histórico...</h3>";
             try {
                 const q = query(collection(db, "compras", user.uid, "historico"), orderBy("data", "desc"));
                 const querySnapshot = await getDocs(q);
+                const lang = dicionario[idioma];
                 if (querySnapshot.empty) {
-                    container.innerHTML = '<h2>Histórico <button onclick="fecharHistorico()" style="font-size: 14px; cursor: pointer; float: right;">Fechar</button></h2><p>Nenhuma compra salva no histórico.</p>'; return;
+                    container.innerHTML = `<h2>Histórico <button onclick="fecharHistorico()" style="font-size: 14px; cursor: pointer; float: right;">${lang.fechar}</button></h2><p>Nenhuma compra salva no histórico.</p>`; return;
                 }
-                let html = '<h2>Seu Histórico <button onclick="fecharHistorico()" style="font-size: 14px; cursor: pointer; float: right;">Fechar</button></h2>';
+                let html = `<h2>Seu Histórico <button onclick="fecharHistorico()" style="font-size: 14px; cursor: pointer; float: right;">${lang.fechar}</button></h2>`;
                 querySnapshot.forEach((doc) => {
                     const compra = doc.data();
                     const data = compra.data.toDate().toLocaleDateString('pt-BR');
