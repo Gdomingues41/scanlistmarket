@@ -15,73 +15,29 @@
       min-height: 100vh;
       margin: 0;
     }
-    .container {
-      text-align: center;
-    }
-    .logo {
-      width: 120px;
-      margin-bottom: 24px;
-    }
-    h1 {
-      color: #fff;
-      margin-bottom: 24px;
-    }
-    input {
-      width: 280px;
-      padding: 12px;
-      margin-bottom: 12px;
-      border: none;
-      border-radius: 4px;
-      font-size: 16px;
-    }
-    .btn {
-      width: 280px;
-      padding: 12px;
-      margin-top: 8px;
-      margin-bottom: 12px;
-      border: none;
-      border-radius: 4px;
-      font-size: 16px;
-      cursor: pointer;
-      background-color: #fff;
-      color: #d40000;
-      font-weight: bold;
-      transition: opacity 0.2s;
-    }
-    .btn:hover {
-      opacity: 0.9;
-    }
-    .toggle-link {
-      color: #fff;
-      cursor: pointer;
-      text-decoration: underline;
-      margin-top: 10px;
-      display: inline-block;
-    }
-    /* NOVO ESTILO ADICIONADO PARA ORGANIZAR OS FORMULÁRIOS */
-    .form-wrapper {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    /* Esconde o formulário de cadastro por padrão */
-    #form-cadastro {
-      display: none;
-    }
+    .container { text-align: center; }
+    .logo { width: 120px; margin-bottom: 24px; }
+    h1 { color: #fff; margin-bottom: 24px; }
+    input { width: 280px; padding: 12px; margin-bottom: 12px; border: none; border-radius: 4px; font-size: 16px; }
+    .btn { width: 280px; padding: 12px; margin-top: 8px; margin-bottom: 12px; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; background-color: #fff; color: #d40000; font-weight: bold; transition: opacity 0.2s; }
+    .btn:hover { opacity: 0.9; }
+    .toggle-link { color: #fff; cursor: pointer; text-decoration: underline; margin-top: 10px; display: inline-block; }
+    .form-wrapper { display: flex; flex-direction: column; align-items: center; }
+    #form-cadastro { display: none; }
   </style>
 </head>
 <body>
   <div class="container">
     <img src="https://i.imgur.com/dHOSups.png" alt="Scanlist Market Logo" class="logo">
     <h1>Scanlist Market</h1>
-
-    <div id="form-login" class="form-wrapper"> <input type="email" id="loginEmail" placeholder="Email">
+    <div id="form-login" class="form-wrapper">
+      <input type="email" id="loginEmail" placeholder="Email">
       <input type="password" id="loginSenha" placeholder="Senha">
       <button class="btn" onclick="loginEmail()">Entrar</button>
       <p class="toggle-link" onclick="toggleForm('cadastro')">Ainda não tem uma conta? Cadastre-se</p>
     </div>
-
-    <div id="form-cadastro" class="form-wrapper"> <input type="text" id="cadastroNome" placeholder="Nome completo">
+    <div id="form-cadastro" class="form-wrapper">
+      <input type="text" id="cadastroNome" placeholder="Nome completo">
       <input type="email" id="cadastroEmail" placeholder="Email">
       <input type="password" id="cadastroSenha" placeholder="Senha">
       <input type="password" id="confirmarSenha" placeholder="Confirmar senha">
@@ -91,26 +47,22 @@
   </div>
 
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
-    import {
-      getAuth,
-      signInWithEmailAndPassword,
-      createUserWithEmailAndPassword,
-      updateProfile,
-      onAuthStateChanged
-    } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
 
-    // ATENÇÃO: COLOQUE SUA CHAVE DE API AQUI
     const firebaseConfig = {
       apiKey: "AIzaSyCtke_2T3e0HDDMqJsfJsRGs5KcKtN3Xe8",
       authDomain: "scanlistmarket-30143.firebaseapp.com",
+      databaseURL: "https://scanlistmarket-30143-default-rtdb.firebaseio.com",
       projectId: "scanlistmarket-30143",
+      storageBucket: "scanlistmarket-30143.appspot.com",
+      messagingSenderId: "428406265714",
+      appId: "1:428406265714:web:0a9d92dc1229458a3d6feb"
     };
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
 
-    // Função para alternar entre os formulários
     window.toggleForm = (form) => {
       const loginForm = document.getElementById('form-login');
       const cadastroForm = document.getElementById('form-cadastro');
@@ -127,7 +79,6 @@
       const email = document.getElementById('loginEmail').value.trim();
       const senha = document.getElementById('loginSenha').value;
       if (!email || !senha) return alert("Preencha email e senha.");
-
       signInWithEmailAndPassword(auth, email, senha)
         .then(() => window.location.href = "app.html")
         .catch(err => alert("Erro ao logar: " + err.message));
@@ -138,10 +89,8 @@
       const email = document.getElementById('cadastroEmail').value.trim();
       const senha = document.getElementById('cadastroSenha').value;
       const confirmarSenha = document.getElementById('confirmarSenha').value;
-
       if (!nome || !email || !senha) return alert("Preencha todos os campos.");
       if (senha !== confirmarSenha) return alert("As senhas não conferem.");
-
       createUserWithEmailAndPassword(auth, email, senha)
         .then(userCredential => {
           updateProfile(userCredential.user, { displayName: nome })

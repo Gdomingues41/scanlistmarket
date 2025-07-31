@@ -6,48 +6,59 @@
   <title>Scanlist Market</title>
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
   <style>
-    body { font-family: Arial, sans-serif; margin: 0; padding: 0 16px; background-color: #fff; }
-    .header { background-color: #d40000; padding: 20px; text-align: center; color: white; position: relative; }
-    .header img { width: 80px; display: block; margin: 0 auto 10px; }
-    .cart-icon { position: absolute; top: 20px; right: 20px; font-size: 24px; color: white; cursor: pointer; }
-    .cart-count { background-color: red; color: white; border-radius: 50%; padding: 2px 6px; font-size: 12px; position: absolute; top: -10px; right: -10px; }
-    .container { max-width: 500px; margin: 0 auto; text-align: center; padding-bottom: 20px; visibility: hidden; /* Começa escondido */ }
+    body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #fff; }
+    .header { background-color: #d40000; padding: 15px; text-align: center; color: white; position: relative; display: flex; align-items: center; justify-content: space-between; }
+    .header h1 { font-size: 24px; margin: 0; }
+    .cart-icon { font-size: 24px; color: white; cursor: pointer; position: relative; }
+    .cart-count { background-color: #fff; color: #d40000; border-radius: 50%; padding: 2px 6px; font-size: 12px; position: absolute; top: -10px; right: -10px; border: 1px solid #d40000; }
+    .container { max-width: 500px; margin: 0 auto; text-align: center; padding: 16px; visibility: hidden; }
     .btn { display: block; width: 100%; background-color: #d40000; color: white; padding: 12px; margin: 8px 0; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; }
     .btn-green { background-color: #28a745; }
     .btn:hover { opacity: 0.9; }
     .btn:disabled { background-color: #ccc; }
     .input-field { width: 100%; padding: 10px; margin: 10px 0; box-sizing: border-box; font-size: 16px; border: 1px solid #ccc; border-radius: 4px; }
-    .product-img { max-width: 200px; margin: 20px auto; display: block; }
     .total-bar { background-color: #d40000; color: white; padding: 10px; text-align: center; font-weight: bold; margin-top: 20px; }
-    .big-font * { font-size: 20px !important; }
+    .hamburger-menu { font-size: 28px; color: white; cursor: pointer; padding: 0 15px; }
+    .side-menu { height: 100%; width: 250px; position: fixed; z-index: 1001; top: 0; left: -250px; background-color: #f1f1f1; overflow-x: hidden; transition: 0.5s; padding-top: 60px; box-shadow: 2px 0 5px rgba(0,0,0,0.5); }
+    .side-menu a { padding: 10px 15px; text-decoration: none; font-size: 18px; color: #333; display: block; transition: 0.3s; }
+    .side-menu a:hover { color: #d40000; background-color: #ddd; }
+    .side-menu .close-btn { position: absolute; top: 0; right: 25px; font-size: 36px; margin-left: 50px; color: #818181; }
+    .overlay { height: 100%; width: 0; position: fixed; z-index: 1000; left: 0; top: 0; background-color: rgba(0,0,0,0.4); overflow-x: hidden; transition: 0.5s; }
+    .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #fff; display: flex; justify-content: center; align-items: center; z-index: 1002; font-size: 20px; font-weight: bold; color: #d40000; }
+    .product-img { max-width: 200px; margin: 20px auto; display: block; }
     .cart-item { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ccc; padding: 8px 0; }
     .cart-item button { background: none; border: none; color: red; font-size: 20px; cursor: pointer; }
     .quantity-selector button { background: none; border: none; color: red; font-size: 24px; font-weight: bold; cursor: pointer; width: 40px; }
     .quantity-selector span { font-size: 20px; font-weight: bold; margin: 0 15px; }
     .historico-item { background-color: #f9f9f9; border: 1px solid #ddd; border-radius: 8px; padding: 10px; margin-bottom: 10px; text-align: left; }
-    .historico-item strong { color: #d40000; }
     .product-name-container { display: flex; align-items: center; justify-content: center; gap: 10px; }
     .product-actions button { background: none; border: none; font-size: 20px; cursor: pointer; padding: 5px; }
-    .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #fff; display: flex; justify-content: center; align-items: center; z-index: 1000; font-size: 20px; font-weight: bold; color: #d40000; }
   </style>
 </head>
 <body>
   <div id="loading" class="loading-overlay">Verificando login...</div>
 
+  <div id="mySideMenu" class="side-menu">
+    <a href="javascript:void(0)" class="close-btn" onclick="fecharMenu()">&times;</a>
+    <a href="#" onclick="verHistorico()">📄 Ver Histórico</a>
+    <a href="#" onclick="toggleAcessibilidade()">🧓 Acessibilidade</a>
+    <a href="#" onclick="mudarIdioma()">🌐 Mudar Idioma</a>
+    <a href="#" onclick="logout()">🚪 Sair (Logout)</a>
+  </div>
+  <div id="overlay" class="overlay" onclick="fecharMenu()"></div>
+
   <div class="header">
-    <img src="https://i.imgur.com/dHOSups.png" alt="Scanlist Market Logo">
+    <span class="hamburger-menu" onclick="abrirMenu()">&#9776;</span>
     <h1 id="titulo">Scanlist Market</h1>
     <div class="cart-icon" onclick="verCarrinho()">🛒<span class="cart-count" id="cartCount">0</span></div>
   </div>
+
   <div class="container">
     <div id="reader" style="width: 100%; margin-bottom: 10px;"></div>
     <input id="codigoBarra" class="input-field" placeholder="Digite ou escaneie o código">
     <button class="btn" onclick="buscarProduto()">🔍 Buscar Produto</button>
     <button class="btn" onclick="escanearProduto()">📷 Escanear Produto</button>
     <button class="btn" onclick="cadastrarProdutoManual()">📝 Cadastrar Produto Manualmente</button>
-    <button class="btn" onclick="verHistorico()">📄 Ver Histórico</button>
-    <button class="btn" onclick="mudarIdioma()">🌐 Mudar Idioma PT/EN</button>
-    <button class="btn" onclick="toggleAcessibilidade()">🧓 Acessibilidade</button>
     <div id="produto-info" style="display:none; text-align: center;">
       <img id="produto-imagem" class="product-img" src="" alt="Imagem do Produto">
       <div class="product-name-container">
@@ -82,14 +93,18 @@
   </div>
 
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
-    import { getFirestore, doc, getDoc, setDoc, collection, addDoc, serverTimestamp, query, getDocs, orderBy } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
+    import { getFirestore, doc, getDoc, setDoc, collection, addDoc, serverTimestamp, query, getDocs, orderBy } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCtke_2T3e0HDDMqJsfJsRGs5KcKtN3Xe8",
       authDomain: "scanlistmarket-30143.firebaseapp.com",
+      databaseURL: "https://scanlistmarket-30143-default-rtdb.firebaseio.com",
       projectId: "scanlistmarket-30143",
+      storageBucket: "scanlistmarket-30143.appspot.com",
+      messagingSenderId: "428406265714",
+      appId: "1:428406265714:web:0a9d92dc1229458a3d6feb"
     };
 
     const app = initializeApp(firebaseConfig);
@@ -101,12 +116,25 @@
       const container = document.querySelector('.container');
       
       if (user) {
-        // --- USUÁRIO ESTÁ LOGADO ---
         loadingOverlay.style.display = 'none';
         container.style.visibility = 'visible';
 
         let cart = [];
         let barcodeAtual = null;
+        
+        window.abrirMenu = function() {
+          document.getElementById("mySideMenu").style.left = "0";
+          document.getElementById("overlay").style.width = "100%";
+        }
+        window.fecharMenu = function() {
+          document.getElementById("mySideMenu").style.left = "-250px";
+          document.getElementById("overlay").style.width = "0";
+        }
+        window.logout = function() {
+          if (confirm("Tem certeza que deseja sair?")) {
+            signOut(auth).then(() => { window.location.href = 'index.html'; });
+          }
+        }
 
         function limparCarrinhoUI() {
             cart = [];
@@ -199,6 +227,7 @@
             if (!code) return alert("Digite um código de barras válido.");
             barcodeAtual = code;
             window.iniciarCadastroManual(true);
+            const user = auth.currentUser;
             if (user) {
                 const correcaoRef = doc(db, "usuarios", user.uid, "correcoes", code);
                 const docSnap = await getDoc(correcaoRef);
@@ -214,7 +243,7 @@
                 .then(data => {
                     if (data.status === 1 && data.product) {
                         const produto = data.product;
-                        document.getElementById("produto-nome").value = produto.product_name || "";
+                        document.getElementById("produto-nome").value = produto.product_name || "Produto sem nome";
                         document.getElementById("produto-imagem").src = produto.image_url || "";
                         document.getElementById("product-actions-wrapper").style.display = "flex";
                     } else { window.iniciarCadastroManual(false); }
@@ -241,11 +270,12 @@
         window.verHistorico = async function() {
             const container = document.getElementById("historicoContainer");
             container.innerHTML = "<h3>Buscando seu histórico...</h3>";
+            window.fecharMenu();
             try {
                 const q = query(collection(db, "compras", user.uid, "historico"), orderBy("data", "desc"));
                 const querySnapshot = await getDocs(q);
                 if (querySnapshot.empty) {
-                    container.innerHTML = "<p>Nenhuma compra salva no histórico.</p>"; return;
+                    container.innerHTML = "<h2>Histórico</h2><p>Nenhuma compra salva no histórico.</p>"; return;
                 }
                 let html = "<h2>Seu Histórico de Compras</h2>";
                 querySnapshot.forEach((doc) => {
@@ -262,6 +292,8 @@
 
         window.editarProduto = async function() {
             if (!barcodeAtual) return alert("Nenhum produto selecionado para editar.");
+            const user = auth.currentUser;
+            if (!user) return alert("Você precisa estar logado para salvar suas correções.");
             const nomeInput = document.getElementById("produto-nome");
             const nomeAtual = nomeInput.value;
             const nomeCorrigido = prompt("Digite o nome correto para este produto:", nomeAtual);
@@ -289,9 +321,7 @@
         window.toggleAcessibilidade = function() { document.body.classList.toggle("big-font"); };
 
       } else {
-        // --- USUÁRIO NÃO ESTÁ LOGADO ---
         loadingOverlay.style.display = 'none';
-        alert("Sessão expirada ou usuário não logado. Redirecionando para a página de login.");
         window.location.href = 'index.html';
       }
     });
