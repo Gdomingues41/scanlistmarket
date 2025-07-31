@@ -41,10 +41,10 @@
 
   <div id="mySideMenu" class="side-menu">
     <a href="javascript:void(0)" class="close-btn" onclick="fecharMenu()">&times;</a>
-    <a href="#" onclick="verHistorico()">📄 Ver Histórico</a>
-    <a href="#" onclick="toggleAcessibilidade()">🧓 Acessibilidade</a>
-    <a href="#" onclick="mudarIdioma()">🌐 Mudar Idioma</a>
-    <a href="#" onclick="logout()">🚪 Sair (Logout)</a>
+    <a href="#" id="menuVerHistorico" onclick="verHistorico()">📄 Ver Histórico</a>
+    <a href="#" id="menuAcessibilidade" onclick="toggleAcessibilidade()">🧓 Acessibilidade</a>
+    <a href="#" id="menuMudarIdioma" onclick="mudarIdioma()">🌐 Mudar Idioma</a>
+    <a href="#" id="menuSair" onclick="logout()">🚪 Sair (Logout)</a>
   </div>
   <div id="overlay" class="overlay" onclick="fecharMenu()"></div>
 
@@ -57,9 +57,10 @@
   <div class="container">
     <div id="reader" style="width: 100%; margin-bottom: 10px;"></div>
     <input id="codigoBarra" class="input-field" placeholder="Digite ou escaneie o código">
-    <button class="btn" onclick="buscarProduto()">🔍 Buscar Produto</button>
-    <button class="btn" onclick="escanearProduto()">📷 Escanear Produto</button>
-    <button class="btn" onclick="cadastrarProdutoManual()">📝 Cadastrar Produto Manualmente</button>
+    <button id="btnBuscar" class="btn" onclick="buscarProduto()">🔍 Buscar Produto</button>
+    <button id="btnEscanear" class="btn" onclick="escanearProduto()">📷 Escanear Produto</button>
+    <button id="btnCadastrarManual" class="btn" onclick="cadastrarProdutoManual()">📝 Cadastrar Produto Manualmente</button>
+    
     <div id="produto-info" style="display:none; text-align: center;">
       <img id="produto-imagem" class="product-img" src="" alt="Imagem do Produto">
       <div class="product-name-container">
@@ -70,14 +71,14 @@
           </div>
       </div>
       <input id="preco-unitario" type="number" class="input-field" placeholder="Preço unitário">
-      <p style="margin-top:15px; margin-bottom: 5px; font-weight: bold;">Quantidade:</p>
+      <p id="qtdLabel" style="margin-top:15px; margin-bottom: 5px; font-weight: bold;">Quantidade:</p>
       <div class="quantity-selector" style="display: flex; align-items: center; justify-content: center; margin-bottom: 15px;">
           <button type="button" onclick="alterarQuantidade(-1)">-</button>
           <span id="quantidade-display">1</span>
           <button type="button" onclick="alterarQuantidade(1)">+</button>
       </div>
       <input type="hidden" id="quantidade" value="1"> 
-      <button class="btn" onclick="adicionarAoCarrinho()">➕ Adicionar ao Carrinho</button>
+      <button id="btnAddCarrinho" class="btn" onclick="adicionarAoCarrinho()">➕ Adicionar ao Carrinho</button>
     </div>
     <div id="carrinhoDetalhado" style="display:none; margin-top: 20px;"></div>
     <div id="historicoContainer" style="margin-top: 20px;"></div>
@@ -123,35 +124,42 @@
         let cart = [];
         let barcodeAtual = null;
         
-        // Funções do Menu
-        window.abrirMenu = function() {
-          document.getElementById("mySideMenu").style.left = "0";
-          document.getElementById("overlay").style.width = "100%";
-        }
-        window.fecharMenu = function() {
-          document.getElementById("mySideMenu").style.left = "-250px";
-          document.getElementById("overlay").style.width = "0";
-        }
-        window.logout = function() {
-          if (confirm("Tem certeza que deseja sair?")) {
-            signOut(auth).then(() => { window.location.href = 'index.html'; });
-          }
+        const dicionario = {
+            pt: {
+                titulo: "Scanlist Market", placeholderCodigo: "Digite ou escaneie o código", btnBuscar: "🔍 Buscar Produto", btnEscanear: "📷 Escanear Produto", btnCadastrarManual: "📝 Cadastrar Produto Manualmente", menuVerHistorico: "📄 Ver Histórico", menuAcessibilidade: "🧓 Acessibilidade", menuMudarIdioma: "🌐 Mudar Idioma", menuSair: "🚪 Sair (Logout)", produtoPlaceholder: "Nome do produto", precoPlaceholder: "Preço unitário", qtdLabel: "Quantidade:", btnAddCarrinho: "➕ Adicionar ao Carrinho", btnFinalizarCompra: "🛒 Finalizar Compra"
+            },
+            en: {
+                titulo: "Scanlist Market", placeholderCodigo: "Type or scan the code", btnBuscar: "🔍 Search Product", btnEscanear: "📷 Scan Product", btnCadastrarManual: "📝 Manual Product Entry", menuVerHistorico: "📄 View History", menuAcessibilidade: "🧓 Accessibility", menuMudarIdioma: "🌐 Switch Language", menuSair: "🚪 Logout", produtoPlaceholder: "Product name", precoPlaceholder: "Unit price", qtdLabel: "Quantity:", btnAddCarrinho: "➕ Add to Cart", btnFinalizarCompra: "🛒 Finish Purchase"
+            }
+        };
+        
+        let idioma = localStorage.getItem('scanlistMarketIdioma') || 'pt';
+
+        function atualizarTextos() {
+            const lang = dicionario[idioma];
+            document.documentElement.lang = idioma;
+            document.getElementById('titulo').innerText = lang.titulo;
+            document.getElementById('codigoBarra').placeholder = lang.placeholderCodigo;
+            document.getElementById('btnBuscar').innerText = lang.btnBuscar;
+            document.getElementById('btnEscanear').innerText = lang.btnEscanear;
+            document.getElementById('btnCadastrarManual').innerText = lang.btnCadastrarManual;
+            document.getElementById('menuVerHistorico').innerText = lang.menuVerHistorico;
+            document.getElementById('menuAcessibilidade').innerText = lang.menuAcessibilidade;
+            document.getElementById('menuMudarIdioma').innerText = lang.menuMudarIdioma;
+            document.getElementById('menuSair').innerText = lang.menuSair;
+            document.getElementById('qtdLabel').innerText = lang.qtdLabel;
+            document.getElementById('produto-nome').placeholder = lang.produtoPlaceholder;
+            document.getElementById('preco-unitario').placeholder = lang.precoPlaceholder;
+            document.getElementById('btnAddCarrinho').innerText = lang.btnAddCarrinho;
+            document.getElementById('finalizarBtn').innerText = lang.btnFinalizarCompra;
         }
 
-        // Funções que estavam faltando
-        window.toggleAcessibilidade = function() { 
-          document.body.classList.toggle("big-font");
-          window.fecharMenu();
-        };
-        window.mudarIdioma = function() { 
-          alert("Função de idioma em desenvolvimento!"); 
-          window.fecharMenu();
-        };
-
-        // Função para fechar o histórico
-        window.fecharHistorico = function() {
-            document.getElementById("historicoContainer").innerHTML = "";
-        }
+        window.abrirMenu = function() { document.getElementById("mySideMenu").style.left = "0"; document.getElementById("overlay").style.width = "100%"; }
+        window.fecharMenu = function() { document.getElementById("mySideMenu").style.left = "-250px"; document.getElementById("overlay").style.width = "0"; }
+        window.logout = function() { if (confirm("Tem certeza que deseja sair?")) { signOut(auth).then(() => { window.location.href = 'index.html'; }); } }
+        window.toggleAcessibilidade = function() { document.body.classList.toggle("big-font"); window.fecharMenu(); };
+        window.mudarIdioma = function() { idioma = (idioma === 'pt') ? 'en' : 'pt'; localStorage.setItem('scanlistMarketIdioma', idioma); atualizarTextos(); window.fecharMenu(); };
+        window.fecharHistorico = function() { document.getElementById("historicoContainer").innerHTML = ""; }
 
         function limparCarrinhoUI() {
             cart = [];
@@ -181,7 +189,7 @@
                 alert("Compra salva no histórico!");
                 limparCarrinhoUI();
             } catch (e) { console.error("Erro ao salvar compra: ", e); alert("Erro ao salvar compra."); }
-            finally { btn.disabled = false; btn.innerText = "🛒 Finalizar Compra"; }
+            finally { btn.disabled = false; atualizarTextos(); /* restaura texto do botão */ }
         };
 
         window.adicionarAoCarrinho = function() {
@@ -241,7 +249,6 @@
             if (!code) return alert("Digite um código de barras válido.");
             barcodeAtual = code;
             window.iniciarCadastroManual(true);
-            const user = auth.currentUser;
             if (user) {
                 const correcaoRef = doc(db, "usuarios", user.uid, "correcoes", code);
                 const docSnap = await getDoc(correcaoRef);
@@ -307,8 +314,6 @@
 
         window.editarProduto = async function() {
             if (!barcodeAtual) return alert("Nenhum produto selecionado para editar.");
-            const user = auth.currentUser;
-            if (!user) return alert("Você precisa estar logado para salvar suas correções.");
             const nomeInput = document.getElementById("produto-nome");
             const nomeAtual = nomeInput.value;
             const nomeCorrigido = prompt("Digite o nome correto para este produto:", nomeAtual);
@@ -331,6 +336,8 @@
                 alert(`Produto ${barcodeAtual} reportado! Obrigado.`);
             }
         };
+
+        atualizarTextos();
 
       } else {
         loadingOverlay.style.display = 'none';
