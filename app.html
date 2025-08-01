@@ -312,8 +312,15 @@
               await updateDoc(doc(db, "listas", listaAtualId, "itens", itemId), {
                   comprado: !estadoAtual
               });
-              await carregarItensDaLista(listaAtualId);
-          } catch (error) { console.error("Erro ao marcar item: ", error); alert("Não foi possível atualizar o item."); }
+              // Não precisa recarregar a lista inteira, apenas muda o estilo visual
+              const itemDiv = event.target.closest('.lista-item');
+              itemDiv.classList.toggle('comprado');
+              event.target.onchange = () => marcarItemComoComprado(itemId, !estadoAtual);
+          } catch (error) {
+              console.error("Erro ao marcar item: ", error);
+              alert("Não foi possível atualizar o item.");
+              event.target.checked = estadoAtual; // Reverte o checkbox em caso de erro
+          }
       };
 
       function limparCarrinhoUI(){
