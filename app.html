@@ -43,6 +43,7 @@
 </head>
 <body>
   <div id="loading" class="loading-overlay">Verificando login...</div>
+
   <div id="mySideMenu" class="side-menu">
     <a href="javascript:void(0)" class="close-btn" onclick="fecharMenu()">&times;</a>
     <a href="#" id="menuMinhasListas" onclick="mostrarViewListas()">🛒 Minhas Listas</a>
@@ -123,7 +124,7 @@
     import { getFirestore, doc, getDoc, setDoc, deleteDoc, updateDoc, collection, addDoc, serverTimestamp, query, where, getDocs, orderBy } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
     const firebaseConfig = {
-      apiKey: "AIzaSyCtke_2T3e0HDDMqJsfJsRGs5KcKtN3Xe8",
+      apiKey: "SUA_API_KEY_AQUI",
       authDomain: "scanlistmarket-30143.firebaseapp.com",
       databaseURL: "https://scanlistmarket-30143-default-rtdb.firebaseio.com",
       projectId: "scanlistmarket-30143",
@@ -163,6 +164,57 @@
           }
       }
 
+      function atualizarTextos() { /* ... função de textos ... */ }
+
+      window.abrirMenu = function() { document.getElementById("mySideMenu").style.left = "0"; document.getElementById("overlay").style.width = "100%"; }
+      window.fecharMenu = function() { document.getElementById("mySideMenu").style.left = "-250px"; document.getElementById("overlay").style.width = "0"; }
+      window.logout = function() { if (confirm("Tem certeza que deseja sair?")) { signOut(auth).then(() => { window.location.href = 'index.html'; }); } }
+      window.toggleAcessibilidade = function() { document.body.classList.toggle("big-font"); window.fecharMenu(); };
+      window.mudarIdioma = function() { idioma = (idioma === 'pt') ? 'en' : 'pt'; localStorage.setItem('scanlistMarketIdioma', idioma); atualizarTextos(); window.fecharMenu(); };
+      
+      window.fecharHistorico = function() { mostrarView('mainContent'); }
+      window.fecharCarrinho = function() { document.getElementById("carrinhoDetalhado").style.display = "none"; }
+
+      async function carregarListasDoUsuario() {
+          const listasContainer = document.getElementById("listasContainer");
+          listasContainer.innerHTML = "<p>Carregando suas listas...</p>";
+          try {
+              const q = query(collection(db, "listas"), where("userId", "==", user.uid), orderBy("dataCriacao", "desc"));
+              const querySnapshot = await getDocs(q);
+              if (querySnapshot.empty) {
+                  listasContainer.innerHTML = `<p>${dicionario[idioma]?.msgNenhumaLista || "Nenhuma lista criada."}</p>`;
+                  return;
+              }
+              let htmlListas = "";
+              querySnapshot.forEach((doc) => {
+                  const lista = doc.data();
+                  const nomeLista = lista.nome.replace(/'/g, "\\'").replace(/"/g, '\\"');
+                  htmlListas += `<div class="historico-item" style="cursor: pointer;" onclick="abrirLista('${doc.id}', '${nomeLista}')"><strong>${lista.nome}</strong></div>`;
+              });
+              listasContainer.innerHTML = htmlListas;
+          } catch (error) {
+              console.error("Erro ao buscar listas: ", error);
+              listasContainer.innerHTML = "<p>Ocorreu um erro ao carregar suas listas. Verifique o console (F12) para um link de criação de índice do Firebase.</p>";
+          }
+      }
+
+      window.mostrarViewListas = function() {
+          window.fecharMenu();
+          mostrarView('viewListas');
+          carregarListasDoUsuario();
+      };
+
+      window.criarNovaLista = async function() {
+          const nomeDaLista = prompt("Qual o nome da sua nova lista de compras? (ex: Compras da Semana)");
+          if (nomeDaLista && nomeDaLista.trim() !== "") {
+              try {
+                  const novaLista = { userId: user.uid, nome: nomeDaLista.trim(), dataCriacao: serverTimestamp() };
+                  await addDoc(collection(db, "listas"), novaLista);
+                  await carregarListasDoUsuario();
+              } catch (error) { console.error("Erro ao criar lista: ", error); alert("Não foi possível criar a lista."); }
+          }
+      };
+
       async function carregarItensDaLista(idDaLista) {
           const itensContainer = document.getElementById("itensDaListaContainer");
           itensContainer.innerHTML = "<p>Carregando itens...</p>";
@@ -178,6 +230,7 @@
                   const item = doc.data();
                   const itemClass = item.comprado ? "lista-item comprado" : "lista-item";
                   const isChecked = item.comprado ? "checked" : "";
+                  const nomeItem = item.nome.replace(/'/g, "\\'");
                   htmlItens += `<div class="${itemClass}">
                       <input type="checkbox" onchange="marcarItemComoComprado('${doc.id}', ${item.comprado})" ${isChecked}>
                       <span>${item.nome}</span>
@@ -197,7 +250,7 @@
           mostrarView('viewListaDetalhes');
           carregarItensDaLista(idDaLista);
       };
-
+      
       window.adicionarItemNaLista = async function() {
           if (!listaAtualId) return alert("Nenhuma lista selecionada.");
           const novoItemInput = document.getElementById("novoItemInput");
@@ -206,14 +259,12 @@
           try {
               await addDoc(collection(db, "listas", listaAtualId, "itens"), {
                   nome: nomeDoItem,
-                  comprado: false
+                  comprado: false,
+                  nome_lower: nomeDoItem.toLowerCase() // para ordenação
               });
               novoItemInput.value = "";
-              await carregarItensDaLista(listaAtualId); // Recarrega a lista
-          } catch (error) {
-              console.error("Erro ao adicionar item: ", error);
-              alert("Não foi possível adicionar o item.");
-          }
+              await carregarItensDaLista(listaAtualId);
+          } catch (error) { console.error("Erro ao adicionar item: ", error); alert("Não foi possível adicionar o item."); }
       };
       
       window.removerItemDaLista = async function(itemId) {
@@ -222,10 +273,7 @@
               try {
                   await deleteDoc(doc(db, "listas", listaAtualId, "itens", itemId));
                   await carregarItensDaLista(listaAtualId);
-              } catch (error) {
-                  console.error("Erro ao remover item: ", error);
-                  alert("Não foi possível remover o item.");
-              }
+              } catch (error) { console.error("Erro ao remover item: ", error); alert("Não foi possível remover o item."); }
           }
       };
 
@@ -236,18 +284,29 @@
                   comprado: !estadoAtual
               });
               await carregarItensDaLista(listaAtualId);
-          } catch (error) {
-              console.error("Erro ao marcar item: ", error);
-              alert("Não foi possível atualizar o item.");
-          }
+          } catch (error) { console.error("Erro ao marcar item: ", error); alert("Não foi possível atualizar o item."); }
       };
 
-      // --- Aqui entram todas as outras funções que já funcionavam ---
-      // (abrirMenu, fecharMenu, logout, verHistorico, etc... todas completas)
-      
-      // ... (código completo das outras funções) ...
-      
+      function limparCarrinhoUI(){ /* ...código... */ }
+      window.alterarQuantidade = function(delta){ /* ...código... */ };
+      window.finalizarCompra = async function(){ /* ...código... */ };
+      window.adicionarAoCarrinho = function(){ /* ...código... */ };
+      window.removerItem = function(index){ /* ...código... */ };
+      window.iniciarCadastroManual = function(buscando = false){ /* ...código... */ };
+      window.cadastrarProdutoManual = () => window.iniciarCadastroManual(false);
+      window.buscarProduto = async function(){ /* ...código... */ };
+      window.escanearProduto = function(){ /* ...código... */ };
+      window.verHistorico = async function(){ /* ...código... */ };
+      window.editarProduto = async function(){ /* ...código... */ };
+      window.reportarErro = function(){ /* ...código... */ };
+
+      atualizarTextos();
       mostrarView('mainContent');
+
+      } else {
+        loadingOverlay.style.display = 'none';
+        window.location.href = 'index.html';
+      }
     });
   </script>
 </body>
