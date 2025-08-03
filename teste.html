@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Teste de Conexão Firebase</title>
+</head>
+<body>
+    <h1>Teste de Conexão com Firebase</h1>
+    <p>Status: <strong id="status">Verificando...</strong></p>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
+
+        // COLOQUE SUA CONFIGURAÇÃO COMPLETA AQUI
+        const firebaseConfig = {
+          apiKey: "AIzaSyCtke_2T3e0HDDMqJsfJsRGs5KcKtN3Xe8",
+          authDomain: "scanlistmarket-30143.firebaseapp.com",
+          databaseURL: "https://scanlistmarket-30143-default-rtdb.firebaseio.com",
+          projectId: "scanlistmarket-30143",
+          storageBucket: "scanlistmarket-30143.appspot.com",
+          messagingSenderId: "428406265714",
+          appId: "1:428406265714:web:0a9d92dc1229458a3d6feb"
+        };
+
+        try {
+            const app = initializeApp(firebaseConfig);
+            const auth = getAuth(app);
+            console.log("Firebase App inicializado com sucesso!");
+            
+            onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    console.log("Usuário logado:", user.uid);
+                    document.getElementById('status').innerText = `Usuário logado: ${user.email}`;
+                } else {
+                    console.log("Nenhum usuário logado.");
+                    document.getElementById('status').innerText = "Nenhum usuário logado. Por favor, faça login na tela principal e volte aqui.";
+                }
+            });
+
+        } catch (e) {
+            console.error("ERRO CRÍTICO NA INICIALIZAÇÃO:", e);
+            document.getElementById('status').innerText = "ERRO CRÍTICO AO INICIALIZAR. Verifique o console (F12).";
+        }
+    </script>
+</body>
+</html>
