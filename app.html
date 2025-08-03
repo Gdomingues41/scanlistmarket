@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale-1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Scanlist Market</title>
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
   <style>
@@ -152,7 +152,6 @@
             let barcodeAtual = null;
             let listaAtualId = null;
             
-            // DICIONÁRIO COMPLETO
             const dicionario = {
                 pt: {
                     titulo: "Scanlist Market", placeholderCodigo: "Digite ou escaneie o código", btnBuscar: "🔍 Buscar Produto", btnEscanear: "📷 Escanear Produto", btnCadastrarManual: "📝 Cadastrar Produto Manualmente", menuMinhasListas: "🛒 Minhas Listas", menuVerHistorico: "📄 Ver Histórico", menuAcessibilidade: "🧓 Acessibilidade", menuMudarIdioma: "🌐 Mudar Idioma", menuSair: "🚪 Sair (Logout)", produtoPlaceholder: "Nome do produto", precoPlaceholder: "Preço unitário", qtdLabel: "Quantidade:", btnAddCarrinho: "➕ Adicionar ao Carrinho", btnFinalizarCompra: "🛒 Finalizar Compra", fechar: "Fechar", tituloMinhasListas: "Minhas Listas de Compras", btnCriarLista: "+ Criar Nova Lista", msgNenhumaLista: "Nenhuma lista de compras criada ainda."
@@ -252,7 +251,8 @@
                 const itensContainer = document.getElementById("itensDaListaContainer");
                 itensContainer.innerHTML = "<p>Carregando itens...</p>";
                 try {
-                    const q = query(collection(db, "listas", idDaLista, "itens"), orderBy("nome"));
+                    const itensRef = collection(db, "listas", idDaLista, "itens");
+                    const q = query(itensRef, orderBy("nome"));
                     const querySnapshot = await getDocs(q);
                     if (querySnapshot.empty) {
                         itensContainer.innerHTML = "<p>Nenhum item adicionado a esta lista ainda.</p>";
@@ -291,8 +291,7 @@
                 try {
                     await addDoc(collection(db, "listas", listaAtualId, "itens"), {
                         nome: nomeDoItem,
-                        comprado: false,
-                        nome_lower: nomeDoItem.toLowerCase()
+                        comprado: false
                     });
                     novoItemInput.value = "";
                     await carregarItensDaLista(listaAtualId);
@@ -314,9 +313,7 @@
                 try {
                     const itemRef = doc(db, "listas", listaAtualId, "itens", itemId);
                     await updateDoc(itemRef, { comprado: !estadoAtual });
-                    const itemDiv = event.target.closest('.lista-item');
-                    itemDiv.classList.toggle('comprado');
-                    event.target.onchange = () => marcarItemComoComprado(event, itemId, !estadoAtual);
+                    await carregarItensDaLista(listaAtualId);
                 } catch (error) {
                     console.error("Erro ao marcar item: ", error);
                     alert("Não foi possível atualizar o item.");
@@ -486,10 +483,10 @@
             mostrarView('mainContent');
 
         } else {
-          loadingOverlay.style.display = 'none';
-          window.location.href = 'index.html';
+            loadingOverlay.style.display = 'none';
+            window.location.href = 'index.html';
         }
-      });
+    });
     } catch (e) {
         console.error("Erro fatal na inicialização do Firebase:", e);
         const loadingOverlay = document.getElementById('loading');
