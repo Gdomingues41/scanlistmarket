@@ -98,7 +98,7 @@
         <h2 id="tituloDaLista" style="text-align: center;"></h2>
         <div style="display: flex; gap: 10px; margin-bottom: 15px;">
             <input id="novoItemInput" class="input-field" placeholder="Ex: Arroz 1kg" style="flex-grow: 1; margin: 0;">
-            <button class="btn" onclick="adicionarItemNaLista()" style="width: auto; margin: 0;">Adicionar</button>
+            <button id="btnAdicionarItem" class="btn" onclick="adicionarItemNaLista()" style="width: auto; margin: 0;">Adicionar</button>
         </div>
         <div id="itensDaListaContainer"></div>
         <button class="btn" onclick="mostrarViewListas()" style="margin-top: 20px;">&larr; Voltar para Todas as Listas</button>
@@ -151,16 +151,17 @@
             let cart = [];
             let barcodeAtual = null;
             let listaAtualId = null;
-            let idioma = localStorage.getItem('scanlistMarketIdioma') || 'pt';
             
             const dicionario = {
                 pt: {
-                    titulo: "Scanlist Market", placeholderCodigo: "Digite ou escaneie o código", btnBuscar: "🔍 Buscar Produto", btnEscanear: "📷 Escanear Produto", btnCadastrarManual: "📝 Cadastrar Produto Manualmente", menuMinhasListas: "🛒 Minhas Listas", menuVerHistorico: "📄 Ver Histórico", menuAcessibilidade: "🧓 Acessibilidade", menuMudarIdioma: "🌐 Mudar Idioma", menuSair: "🚪 Sair (Logout)", produtoPlaceholder: "Nome do produto", precoPlaceholder: "Preço unitário", qtdLabel: "Quantidade:", btnAddCarrinho: "➕ Adicionar ao Carrinho", btnFinalizarCompra: "🛒 Finalizar Compra", fechar: "Fechar", tituloMinhasListas: "Minhas Listas de Compras", btnCriarLista: "+ Criar Nova Lista", msgNenhumaLista: "Nenhuma lista de compras criada ainda."
+                    titulo: "Scanlist Market", placeholderCodigo: "Digite ou escaneie o código", btnBuscar: "🔍 Buscar Produto", btnEscanear: "📷 Escanear Produto", btnCadastrarManual: "📝 Cadastrar Produto Manualmente", menuMinhasListas: "🛒 Minhas Listas", menuVerHistorico: "📄 Ver Histórico", menuAcessibilidade: "🧓 Acessibilidade", menuMudarIdioma: "🌐 Mudar Idioma", menuSair: "🚪 Sair (Logout)", produtoPlaceholder: "Nome do produto", precoPlaceholder: "Preço unitário", qtdLabel: "Quantidade:", btnAddCarrinho: "➕ Adicionar ao Carrinho", btnFinalizarCompra: "🛒 Finalizar Compra", fechar: "Fechar", tituloMinhasListas: "Minhas Listas de Compras", btnCriarLista: "+ Criar Nova Lista", msgNenhumaLista: "Nenhuma lista de compras criada ainda.", btnAdicionarItem: "Adicionar", placeholderNovoItem: "Ex: Arroz 1kg", voltarListas: "&larr; Voltar para Todas as Listas"
                 },
                 en: {
-                    titulo: "Scanlist Market", placeholderCodigo: "Type or scan the code", btnBuscar: "🔍 Search Product", btnEscanear: "📷 Scan Product", btnCadastrarManual: "📝 Manual Product Entry", menuMinhasListas: "🛒 My Lists", menuVerHistorico: "📄 View History", menuAcessibilidade: "🧓 Accessibility", menuMudarIdioma: "🌐 Switch Language", menuSair: "🚪 Logout", produtoPlaceholder: "Product name", precoPlaceholder: "Unit price", qtdLabel: "Quantity:", btnAddCarrinho: "➕ Add to Cart", btnFinalizarCompra: "🛒 Finish Purchase", fechar: "Close", tituloMinhasListas: "My Shopping Lists", btnCriarLista: "+ Create New List", msgNenhumaLista: "No shopping lists created yet."
+                    titulo: "Scanlist Market", placeholderCodigo: "Type or scan the code", btnBuscar: "🔍 Search Product", btnEscanear: "📷 Scan Product", btnCadastrarManual: "📝 Manual Product Entry", menuMinhasListas: "🛒 My Lists", menuVerHistorico: "📄 View History", menuAcessibilidade: "🧓 Accessibility", menuMudarIdioma: "🌐 Switch Language", menuSair: "🚪 Logout", produtoPlaceholder: "Product name", precoPlaceholder: "Unit price", qtdLabel: "Quantity:", btnAddCarrinho: "➕ Add to Cart", btnFinalizarCompra: "🛒 Finish Purchase", fechar: "Close", tituloMinhasListas: "My Shopping Lists", btnCriarLista: "+ Create New List", msgNenhumaLista: "No shopping lists created yet.", btnAdicionarItem: "Add", placeholderNovoItem: "Ex: Rice 1kg", voltarListas: "&larr; Back to All Lists"
                 }
             };
+            
+            let idioma = localStorage.getItem('scanlistMarketIdioma') || 'pt';
 
             function atualizarTextos() {
                 const lang = dicionario[idioma];
@@ -184,6 +185,9 @@
                 document.getElementById('tituloMinhasListas').innerText = lang.tituloMinhasListas;
                 document.getElementById('btnCriarLista').innerText = lang.btnCriarLista;
                 document.getElementById('msgNenhumaLista').innerText = lang.msgNenhumaLista;
+                document.getElementById('novoItemInput').placeholder = lang.placeholderNovoItem;
+                document.getElementById('btnAdicionarItem').innerText = lang.btnAdicionarItem;
+                document.querySelector('#viewListaDetalhes button[onclick="mostrarViewListas()"]').innerHTML = lang.voltarListas;
             }
 
             function mostrarView(viewId) {
@@ -454,6 +458,19 @@
                     });
                     container.innerHTML = html;
                 } catch (e) { console.error("Erro ao buscar histórico: ", e); container.innerHTML = "<p>Erro ao buscar seu histórico.</p>"; }
+            };
+
+            window.verCarrinho = function() {
+                window.fecharHistorico();
+                mostrarView('carrinhoDetalhado');
+                const container = document.getElementById("carrinhoDetalhado");
+                if (cart.length === 0) { container.style.display = "none"; return; }
+                const lang = dicionario[idioma];
+                let html = `<h3>Itens no Carrinho <button onclick="fecharCarrinho()" style="font-size: 14px; cursor: pointer; float: right;">${lang.fechar}</button></h3>`;
+                cart.forEach((item, i) => {
+                    html += `<div class='cart-item'><span>${item.nome} - R$ ${item.preco.toFixed(2).replace(".", ",")} x ${item.quantidade} = <strong>R$ ${item.total.toFixed(2).replace(".", ",")}</strong></span><button onclick='removerItem(${i})'>🗑️</button></div>`;
+                });
+                container.innerHTML = html;
             };
 
             window.editarProduto = async function(){

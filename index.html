@@ -9,7 +9,6 @@
       background-color: #d40000;
       font-family: Arial, sans-serif;
       display: flex;
-      flex-direction: column; /* Alinha itens verticalmente */
       align-items: center;
       justify-content: center;
       min-height: 100vh;
@@ -17,22 +16,21 @@
       padding: 20px;
       box-sizing: border-box;
     }
-    .logo {
-      width: 100px;
-      margin-bottom: 20px;
-    }
     .login-card {
       background-color: #ffffff;
-      padding: 30px;
+      padding: 40px 30px;
       border-radius: 8px;
       box-shadow: 0 4px 15px rgba(0,0,0,0.2);
       width: 100%;
       max-width: 400px;
       text-align: center;
     }
+    .logo {
+      width: 100px;
+      margin-bottom: 20px;
+    }
     h1 {
       color: #333;
-      margin-top: 0;
       margin-bottom: 30px;
       font-size: 24px;
     }
@@ -66,14 +64,6 @@
     .btn-primary:hover {
       background-color: #a80000;
     }
-    .btn-secondary {
-      background-color: #f1f1f1;
-      color: #555;
-      margin-top: 15px;
-    }
-    .btn-secondary:hover {
-      background-color: #e0e0e0;
-    }
     .toggle-link {
       color: #d40000;
       cursor: pointer;
@@ -88,10 +78,8 @@
   </style>
 </head>
 <body>
-  
-  <img src="https://i.imgur.com/dHOSups.png" alt="Scanlist Market Logo" class="logo">
-
   <div class="login-card">
+    <img src="https://i.imgur.com/dHOSups.png" alt="Scanlist Market Logo" class="logo">
     <h1 id="form-title">Login</h1>
 
     <div id="form-container">
@@ -109,7 +97,6 @@
         </div>
         
         <button id="main-button" class="btn btn-primary" onclick="loginEmail()">Entrar</button>
-        <button class="btn btn-secondary" onclick="loginGoogle()">Entrar com Google</button>
     </div>
 
     <p id="toggle-link" class="toggle-link" onclick="toggleForm()">Ainda não tem uma conta? Cadastre-se</p>
@@ -117,7 +104,7 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
-    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
+    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCtke_2T3e0HDDMqJsfJsRGs5KcKtN3Xe8",
@@ -131,7 +118,6 @@
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
-    const provider = new GoogleAuthProvider();
 
     let isLoginView = true;
 
@@ -187,12 +173,6 @@
         .catch(err => {
           alert("Erro ao criar conta: " + err.message);
         });
-    };
-
-    window.loginGoogle = () => {
-      signInWithPopup(auth, provider)
-        .then(() => { window.location.href = "app.html"; })
-        .catch(err => { alert("Erro ao logar com Google: " + err.message); });
     };
 
     onAuthStateChanged(auth, (user) => {
