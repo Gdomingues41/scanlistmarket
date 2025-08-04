@@ -313,7 +313,7 @@
                 try {
                     const itemRef = doc(db, "listas", listaAtualId, "itens", itemId);
                     await updateDoc(itemRef, { comprado: !estadoAtual });
-                    await carregarItensDaLista(listaAtualId);
+                    await carregarItensDaLista(listaAtualId); // Simplificado para recarregar a lista
                 } catch (error) {
                     console.error("Erro ao marcar item: ", error);
                     alert("Não foi possível atualizar o item.");
@@ -486,7 +486,6 @@
             loadingOverlay.style.display = 'none';
             window.location.href = 'index.html';
         }
-    });
     } catch (e) {
         console.error("Erro fatal na inicialização do Firebase:", e);
         const loadingOverlay = document.getElementById('loading');
