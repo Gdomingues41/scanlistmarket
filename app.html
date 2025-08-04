@@ -151,6 +151,7 @@
             let cart = [];
             let barcodeAtual = null;
             let listaAtualId = null;
+            let idioma = localStorage.getItem('scanlistMarketIdioma') || 'pt';
             
             const dicionario = {
                 pt: {
@@ -160,8 +161,6 @@
                     titulo: "Scanlist Market", placeholderCodigo: "Type or scan the code", btnBuscar: "🔍 Search Product", btnEscanear: "📷 Scan Product", btnCadastrarManual: "📝 Manual Product Entry", menuMinhasListas: "🛒 My Lists", menuVerHistorico: "📄 View History", menuAcessibilidade: "🧓 Accessibility", menuMudarIdioma: "🌐 Switch Language", menuSair: "🚪 Logout", produtoPlaceholder: "Product name", precoPlaceholder: "Unit price", qtdLabel: "Quantity:", btnAddCarrinho: "➕ Add to Cart", btnFinalizarCompra: "🛒 Finish Purchase", fechar: "Close", tituloMinhasListas: "My Shopping Lists", btnCriarLista: "+ Create New List", msgNenhumaLista: "No shopping lists created yet.", btnAdicionarItem: "Add", placeholderNovoItem: "Ex: Rice 1kg", voltarListas: "&larr; Back to All Lists"
                 }
             };
-            
-            let idioma = localStorage.getItem('scanlistMarketIdioma') || 'pt';
 
             function atualizarTextos() {
                 const lang = dicionario[idioma];
@@ -208,12 +207,7 @@
             window.toggleAcessibilidade = function() { document.body.classList.toggle("big-font"); window.fecharMenu(); };
             window.mudarIdioma = function() { idioma = (idioma === 'pt') ? 'en' : 'pt'; localStorage.setItem('scanlistMarketIdioma', idioma); atualizarTextos(); window.fecharMenu(); };
             window.fecharHistorico = function() { mostrarView('mainContent'); };
-            
-            // CORREÇÃO AQUI
-            window.fecharCarrinho = function() {
-                document.getElementById("carrinhoDetalhado").style.display = "none";
-                mostrarView('mainContent'); // Mostra a tela principal de volta
-            };
+            window.fecharCarrinho = function() { document.getElementById("carrinhoDetalhado").style.display = "none"; mostrarView('mainContent'); };
 
             async function carregarListasDoUsuario() {
                 const listasContainer = document.getElementById("listasContainer");
