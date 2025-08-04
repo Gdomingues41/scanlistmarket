@@ -448,8 +448,8 @@
                         container.innerHTML = `<h2>Histórico <button onclick="fecharHistorico()" style="font-size: 14px; cursor: pointer; float: right;">${lang.fechar}</button></h2><p>Nenhuma compra salva no histórico.</p>`; return;
                     }
                     let html = `<h2>Seu Histórico <button onclick="fecharHistorico()" style="font-size: 14px; cursor: pointer; float: right;">${lang.fechar}</button></h2>`;
-                    querySnapshot.forEach((doc) => {
-                        const compra = doc.data();
+                    querySnapshot.forEach((docRef) => {
+                        const compra = docRef.data();
                         const data = compra.data.toDate().toLocaleDateString('pt-BR');
                         html += `<div class="historico-item"><p><strong>Data:</strong> ${data}</p><p><strong>Total:</strong> R$ ${compra.total.toFixed(2).replace(",", ",")}</p></div>`;
                     });
@@ -486,6 +486,7 @@
             loadingOverlay.style.display = 'none';
             window.location.href = 'index.html';
         }
+    });
     } catch (e) {
         console.error("Erro fatal na inicialização do Firebase:", e);
         const loadingOverlay = document.getElementById('loading');
