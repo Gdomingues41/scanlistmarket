@@ -208,7 +208,12 @@
             window.toggleAcessibilidade = function() { document.body.classList.toggle("big-font"); window.fecharMenu(); };
             window.mudarIdioma = function() { idioma = (idioma === 'pt') ? 'en' : 'pt'; localStorage.setItem('scanlistMarketIdioma', idioma); atualizarTextos(); window.fecharMenu(); };
             window.fecharHistorico = function() { mostrarView('mainContent'); };
-            window.fecharCarrinho = function() { document.getElementById("carrinhoDetalhado").style.display = "none"; };
+            
+            // CORREÇÃO AQUI
+            window.fecharCarrinho = function() {
+                document.getElementById("carrinhoDetalhado").style.display = "none";
+                mostrarView('mainContent'); // Mostra a tela principal de volta
+            };
 
             async function carregarListasDoUsuario() {
                 const listasContainer = document.getElementById("listasContainer");
