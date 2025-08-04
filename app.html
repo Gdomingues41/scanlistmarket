@@ -288,8 +288,7 @@
                 const nomeDoItem = novoItemInput.value.trim();
                 if (nomeDoItem === "") return;
                 try {
-                    const itensRef = collection(db, "listas", listaAtualId, "itens");
-                    await addDoc(itensRef, {
+                    await addDoc(collection(db, "listas", listaAtualId, "itens"), {
                         nome: nomeDoItem,
                         comprado: false
                     });
@@ -313,7 +312,7 @@
                 try {
                     const itemRef = doc(db, "listas", listaAtualId, "itens", itemId);
                     await updateDoc(itemRef, { comprado: !estadoAtual });
-                    await carregarItensDaLista(listaAtualId); // Simplificado para recarregar a lista
+                    await carregarItensDaLista(listaAtualId);
                 } catch (error) {
                     console.error("Erro ao marcar item: ", error);
                     alert("Não foi possível atualizar o item.");
@@ -482,10 +481,7 @@
             atualizarTextos();
             mostrarView('mainContent');
 
-        } else {
-            loadingOverlay.style.display = 'none';
-            window.location.href = 'index.html';
-        }
+        });
     } catch (e) {
         console.error("Erro fatal na inicialização do Firebase:", e);
         const loadingOverlay = document.getElementById('loading');
