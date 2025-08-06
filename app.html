@@ -254,7 +254,7 @@
                 itensContainer.innerHTML = "<p>Carregando itens...</p>";
                 try {
                     const itensRef = collection(db, "listas", idDaLista, "itens");
-                    const q = query(itensRef, orderBy("nome"));
+                    const q = query(itensRef); // Removido orderBy para simplificar
                     const querySnapshot = await getDocs(q);
                     if (querySnapshot.empty) {
                         itensContainer.innerHTML = "<p>Nenhum item adicionado a esta lista ainda.</p>";
