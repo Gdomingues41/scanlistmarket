@@ -39,6 +39,8 @@
     .lista-item input[type="checkbox"] { margin-right: 15px; width: 22px; height: 22px; flex-shrink: 0; }
     .lista-item span { flex-grow: 1; text-align: left; }
     .lista-item .remover-item-btn { margin-left: auto; background: none; border: none; cursor: pointer; font-size: 20px; padding: 5px; flex-shrink: 0; }
+    /* botão para voltar ao scanner dentro da tela de listas */
+    .go-scan-btn { width: 60%; margin: 10px auto 0 auto; background: #007bff; color: #fff; border-radius: 6px; padding: 10px; border: none; cursor: pointer; }
   </style>
 </head>
 <body>
@@ -62,7 +64,7 @@
 
   <div class="container">
     <div id="mainContent">
-        <div id="reader" style="width: 100%; margin-bottom: 10px;"></div>
+        <div id="reader" style="width: 100%; margin-bottom: 10px; display:none;"></div>
         <input id="codigoBarra" class="input-field" placeholder="Digite ou escaneie o código">
         <button id="btnBuscar" class="btn" onclick="buscarProduto()">🔍 Buscar Produto</button>
         <button id="btnEscanear" class="btn" onclick="escanearProduto()">📷 Escanear Produto</button>
@@ -92,6 +94,8 @@
         <h2 id="tituloMinhasListas">Minhas Listas de Compras</h2>
         <button id="btnCriarLista" class="btn" onclick="criarNovaLista()">+ Criar Nova Lista</button>
         <div id="listasContainer" style="margin-top: 20px; text-align: left;"></div>
+        <!-- botão para voltar ao escaneamento -->
+        <button class="go-scan-btn" onclick="irParaScanner()">Ir para Escanear Produtos</button>
     </div>
     
     <div id="viewListaDetalhes" style="display: none; text-align: left;">
@@ -148,10 +152,16 @@
             document.getElementById('loading').style.display = 'none';
             document.querySelector('.container').style.visibility = 'visible';
 
+            // Estado do app
             let cart = [];
             let barcodeAtual = null;
             let listaAtualId = null;
-            
+            let html5QrCodeInstance = null;
+            let scannerAtivo = false;
+
+            const STORAGE_KEY = 'scanlistmarket_cart_v1';
+
+            // dicionário e idioma (sem alterações)
             const dicionario = {
                 pt: {
                     titulo: "Scanlist Market", placeholderCodigo: "Digite ou escaneie o código", btnBuscar: "🔍 Buscar Produto", btnEscanear: "📷 Escanear Produto", btnCadastrarManual: "📝 Cadastrar Produto Manualmente", menuMinhasListas: "🛒 Minhas Listas", menuVerHistorico: "📄 Ver Histórico", menuAcessibilidade: "🧓 Acessibilidade", menuMudarIdioma: "🌐 Mudar Idioma", menuSair: "🚪 Sair (Logout)", produtoPlaceholder: "Nome do produto", precoPlaceholder: "Preço unitário", qtdLabel: "Quantidade:", btnAddCarrinho: "➕ Adicionar ao Carrinho", btnFinalizarCompra: "🛒 Finalizar Compra", fechar: "Fechar", tituloMinhasListas: "Minhas Listas de Compras", btnCriarLista: "+ Criar Nova Lista", msgNenhumaLista: "Nenhuma lista de compras criada ainda.", btnAdicionarItem: "Adicionar", placeholderNovoItem: "Ex: Arroz 1kg", voltarListas: "&larr; Voltar para Todas as Listas"
@@ -184,13 +194,62 @@
                 document.getElementById('finalizarBtn').innerText = lang.btnFinalizarCompra;
                 document.getElementById('tituloMinhasListas').innerText = lang.tituloMinhasListas;
                 document.getElementById('btnCriarLista').innerText = lang.btnCriarLista;
-                document.getElementById('msgNenhumaLista').innerText = lang.msgNenhumaLista;
-                document.getElementById('novoItemInput').placeholder = lang.placeholderNovoItem;
-                document.getElementById('btnAdicionarItem').innerText = lang.btnAdicionarItem;
-                document.getElementById('btnVoltarListas').innerHTML = lang.voltarListas;
+                // checar se existe elemento msgNenhumaLista (compatibilidade)
+                const msgElem = document.getElementById('msgNenhumaLista');
+                if (msgElem) msgElem.innerText = lang.msgNenhumaLista;
+                const novoItemInput = document.getElementById('novoItemInput');
+                if (novoItemInput) novoItemInput.placeholder = lang.placeholderNovoItem;
+                const btnAdicionarItem = document.getElementById('btnAdicionarItem');
+                if (btnAdicionarItem) btnAdicionarItem.innerText = lang.btnAdicionarItem;
+                const btnVoltarListas = document.getElementById('btnVoltarListas');
+                if (btnVoltarListas) btnVoltarListas.innerHTML = lang.voltarListas;
             }
 
+            // ---------- Persistência do carrinho (localStorage) ----------
+            function salvarCarrinho() {
+              try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(cart));
+              } catch (e) {
+                console.warn("Falha ao salvar carrinho:", e);
+              }
+            }
+
+            function carregarCarrinho() {
+              try {
+                const salvo = localStorage.getItem(STORAGE_KEY);
+                if (salvo) {
+                  cart = JSON.parse(salvo) || [];
+                } else {
+                  cart = [];
+                }
+                atualizarCarrinho();
+              } catch (e) {
+                console.warn("Falha ao carregar carrinho:", e);
+                cart = [];
+              }
+            }
+
+            function atualizarCarrinho() {
+              document.getElementById("cartCount").innerText = cart.length;
+              if (cart.length > 0) {
+                document.getElementById("totalBar").style.display = 'block';
+                document.getElementById("totalBar").innerText = `Total: R$ ${cart.reduce((acc, p) => acc + p.total, 0).toFixed(2).replace(".", ",")}`;
+                document.getElementById("finalizarBtn").style.display = 'block';
+              } else {
+                document.getElementById("totalBar").style.display = 'none';
+                document.getElementById("finalizarBtn").style.display = 'none';
+              }
+              salvarCarrinho();
+            }
+
+            // carrega cart ao iniciar
+            carregarCarrinho();
+
+            // ---------- Navegação entre views ----------
             function mostrarView(viewId) {
+                // parar scanner ao trocar de view
+                if (scannerAtivo) stopScanner();
+
                 document.getElementById('mainContent').style.display = 'none';
                 document.getElementById('historicoContainer').innerHTML = '';
                 document.getElementById('viewListas').style.display = 'none';
@@ -210,6 +269,7 @@
             window.fecharHistorico = function() { mostrarView('mainContent'); };
             window.fecharCarrinho = function() { document.getElementById("carrinhoDetalhado").style.display = "none"; mostrarView('mainContent'); };
 
+            // ---------- Listas do Firestore ----------
             async function carregarListasDoUsuario() {
                 const listasContainer = document.getElementById("listasContainer");
                 listasContainer.innerHTML = "<p>Carregando suas listas...</p>";
@@ -223,13 +283,13 @@
                     let htmlListas = "";
                     querySnapshot.forEach((docRef) => {
                         const lista = docRef.data();
-                        const nomeLista = lista.nome.replace(/'/g, "\\'").replace(/"/g, '\\"');
+                        const nomeLista = (lista.nome || '').replace(/'/g, "\\'").replace(/"/g, '\\"');
                         htmlListas += `<div class="historico-item" style="cursor: pointer;" onclick="abrirLista('${docRef.id}', '${nomeLista}')"><strong>${lista.nome}</strong></div>`;
                     });
                     listasContainer.innerHTML = htmlListas;
                 } catch (error) {
                     console.error("Erro ao buscar listas: ", error);
-                    listasContainer.innerHTML = "<p>Ocorreu um erro ao carregar suas listas. Verifique o console (F12) para um link de criação de índice do Firebase.</p>";
+                    listasContainer.innerHTML = "<p>Ocorreu um erro ao carregar suas listas. Verifique o console.</p>";
                 }
             }
 
@@ -324,23 +384,46 @@
                 }
             };
 
-            function limparCarrinhoUI(){
-                cart = [];
-                document.getElementById("cartCount").innerText = '0';
-                document.getElementById("totalBar").style.display = 'none';
-                window.fecharCarrinho();
-                document.getElementById("finalizarBtn").style.display = 'none';
-            }
-
-            window.alterarQuantidade = function(delta){
-                const qtyInput = document.getElementById("quantidade");
-                const qtyDisplay = document.getElementById("quantidade-display");
-                let novaQty = parseInt(qtyInput.value) + delta;
-                if (novaQty < 1) novaQty = 1;
-                qtyInput.value = novaQty;
-                qtyDisplay.innerText = novaQty;
+            // ---------- Carrinho: adicionar, remover, persistir ----------
+            window.adicionarAoCarrinho = function(){
+                const nome = document.getElementById("produto-nome").value;
+                const precoRaw = document.getElementById("preco-unitario").value;
+                const preco = parseFloat(String(precoRaw).replace(",", ".")) || 0;
+                const quantidade = parseInt(document.getElementById("quantidade").value) || 1;
+                if (!nome || preco <= 0) return alert("Preencha nome e preço.");
+                cart.push({ nome, preco, quantidade, total: preco * quantidade });
+                document.getElementById("cartCount").innerText = cart.length;
+                document.getElementById("produto-info").style.display = "none";
+                document.getElementById("codigoBarra").value = "";
+                atualizarCarrinho();
             };
 
+            // substituir função removerItem incompleta
+            window.removerItem = function(index){
+                if (index < 0 || index >= cart.length) return;
+                cart.splice(index, 1);
+                atualizarCarrinho();
+                // se carrinho estiver aberto, atualizar a visualização
+                if (document.getElementById('carrinhoDetalhado').style.display !== 'none') {
+                    window.verCarrinho();
+                }
+            };
+
+            // ---------- Ver carrinho detalhado ----------
+            window.verCarrinho = function() {
+                window.fecharHistorico();
+                mostrarView('carrinhoDetalhado');
+                const container = document.getElementById("carrinhoDetalhado");
+                if (cart.length === 0) { container.style.display = "none"; return; }
+                const lang = dicionario[idioma];
+                let html = `<h3>Itens no Carrinho <button onclick="fecharCarrinho()" style="font-size: 14px; cursor: pointer; float: right;">${lang.fechar}</button></h3>`;
+                cart.forEach((item, i) => {
+                    html += `<div class='cart-item'><span>${item.nome} - R$ ${item.preco.toFixed(2).replace(".", ",")} x ${item.quantidade} = <strong>R$ ${item.total.toFixed(2).replace(".", ",")}</strong></span><button onclick='removerItem(${i})'>🗑️</button></div>`;
+                });
+                container.innerHTML = html;
+            };
+
+            // ---------- Finalizar compra (salvar no Firestore) ----------
             window.finalizarCompra = async function(){
                 if (cart.length === 0) return alert("Carrinho vazio!");
                 const btn = document.getElementById('finalizarBtn');
@@ -349,36 +432,13 @@
                     const compra = { userId: user.uid, data: serverTimestamp(), itens: cart, total: cart.reduce((acc, p) => acc + p.total, 0) };
                     await addDoc(collection(db, "compras", user.uid, "historico"), compra);
                     alert("Compra salva no histórico!");
-                    limparCarrinhoUI();
+                    cart = [];
+                    atualizarCarrinho();
                 } catch (e) { console.error("Erro ao salvar compra: ", e); alert("Erro ao salvar compra."); }
                 finally { btn.disabled = false; atualizarTextos(); }
             };
 
-            window.adicionarAoCarrinho = function(){
-                const nome = document.getElementById("produto-nome").value;
-                const preco = parseFloat(document.getElementById("preco-unitario").value.replace(",", ".")) || 0;
-                const quantidade = parseInt(document.getElementById("quantidade").value) || 1;
-                if (!nome || preco <= 0) return alert("Preencha nome e preço.");
-                cart.push({ nome, preco, quantidade, total: preco * quantidade });
-                document.getElementById("cartCount").innerText = cart.length;
-                document.getElementById("produto-info").style.display = "none";
-                document.getElementById("totalBar").innerText = `Total: R$ ${cart.reduce((acc, p) => acc + p.total, 0).toFixed(2).replace(".", ",")}`;
-                document.getElementById("totalBar").style.display = "block";
-                document.getElementById("codigoBarra").value = "";
-                document.getElementById("finalizarBtn").style.display = "block";
-            };
-            
-            window.removerItem = function(index){
-                cart.splice(index, 1);
-                document.getElementById("cartCount").innerText = cart.length;
-                window.verCarrinho();
-                if (cart.length > 0) {
-                    document.getElementById("totalBar").innerText = `Total: R$ ${cart.reduce((acc, p) => acc + p.total, 0).toFixed(2).replace(".", ",")}`;
-                } else {
-                    limparCarrinhoUI();
-                }
-            };
-
+            // ---------- Buscar produto via API / correções ----------
             window.iniciarCadastroManual = function(buscando = false){
                 barcodeAtual = buscando ? barcodeAtual : null;
                 document.getElementById("produto-info").style.display = "block";
@@ -424,18 +484,113 @@
                         window.iniciarCadastroManual(false);
                     });
             };
-            
-            window.escanearProduto = function(){
+
+            // ---------- Scanner: start / stop com html5-qrcode (compatível iOS/Android) ----------
+            function stopScanner() {
+              try {
+                if (html5QrCodeInstance && scannerAtivo) {
+                  html5QrCodeInstance.stop().then(() => {
+                    // limpar DOM do leitor
+                    const leitorHtml = document.getElementById('reader');
+                    leitorHtml.style.display = 'none';
+                    scannerAtivo = false;
+                  }).catch(err => {
+                    console.warn("Erro ao parar scanner:", err);
+                    const leitorHtml = document.getElementById('reader');
+                    leitorHtml.style.display = 'none';
+                    scannerAtivo = false;
+                  });
+                }
+              } catch (e) {
+                console.warn("stopScanner error", e);
+                const leitorHtml = document.getElementById('reader');
+                leitorHtml.style.display = 'none';
+                scannerAtivo = false;
+              }
+            }
+
+            window.escanearProduto = async function(){
+                // inicia o leitor apenas com interação do usuário
                 const leitorHtml = document.getElementById('reader');
                 leitorHtml.style.display = 'block';
-                const html5QrCode = new Html5Qrcode("reader");
-                const onScanSuccess = (decodedText) => {
-                    try { html5QrCode.stop(); } catch(err) {}
+
+                // se já estiver em execução, para antes
+                if (scannerAtivo) {
+                  stopScanner();
+                  return;
+                }
+
+                html5QrCodeInstance = new Html5Qrcode("reader");
+
+                const config = { fps: 10, qrbox: { width: 250, height: 150 } };
+                // câmera traseira: usar facingMode ideal para evitar falha em iOS
+                const cameraConfig = { facingMode: { ideal: "environment" } };
+
+                const onScanSuccess = (decodedText, decodedResult) => {
+                    // decodedText é o valor do código lido
+                    try { html5QrCodeInstance.stop(); } catch(err) {}
                     leitorHtml.style.display = 'none';
+                    scannerAtivo = false;
                     document.getElementById("codigoBarra").value = decodedText;
-                    window.buscarProduto(); 
+                    window.buscarProduto();
                 };
-                html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 150 } }, onScanSuccess, () => {});
+
+                const onScanFailure = (error) => {
+                    // falhas periódicas são normais; não poluir o usuário
+                    // console.log("scan failure", error);
+                };
+
+                try {
+                    await html5QrCodeInstance.start(cameraConfig, config, onScanSuccess, onScanFailure);
+                    scannerAtivo = true;
+                } catch (err) {
+                    console.error("Erro ao iniciar scanner:", err);
+                    leitorHtml.style.display = 'none';
+                    scannerAtivo = false;
+                    alert("Não foi possível acessar a câmera. Verifique permissões ou abra o link no navegador (não em apps como WhatsApp).");
+                }
+            };
+
+            // utility: ir para scanner a partir de outras views
+            window.irParaScanner = function(){
+                mostrarView('mainContent');
+                // foco no campo e instrução para clicar em escanear
+                document.getElementById('codigoBarra').focus();
+                // opcional: abrir automaticamente o leitor? melhor deixar o usuário clicar "Escanear"
+                // setTimeout(() => escanearProduto(), 600);
+            };
+
+            // ---------- edição e report de produto ----------
+            window.editarProduto = async function(){
+                if (!barcodeAtual) return alert("Nenhum produto selecionado para editar.");
+                const nomeInput = document.getElementById("produto-nome");
+                const nomeAtual = nomeInput.value;
+                const nomeCorrigido = prompt("Digite o nome correto para este produto:", nomeAtual);
+                if (nomeCorrigido && nomeCorrigido.trim() !== "" && nomeCorrigido.trim() !== nomeAtual) {
+                    try {
+                        const correcaoRef = doc(db, "usuarios", user.uid, "correcoes", barcodeAtual);
+                        await setDoc(correcaoRef, { nome: nomeCorrigido.trim() });
+                        nomeInput.value = nomeCorrigido.trim();
+                        alert("Sua correção pessoal foi salva com sucesso!");
+                    } catch (e) { console.error("Erro ao salvar correção: ", e); alert("Ocorreu um erro ao salvar sua correção."); }
+                }
+            };
+            
+            window.reportarErro = function(){
+                if (!barcodeAtual) return alert("Nenhum produto selecionado.");
+                if (confirm("Reportar um erro neste produto?")) {
+                    alert(`Produto ${barcodeAtual} reportado! Obrigado.`);
+                }
+            };
+
+            // ---------- utilitários restantes ----------
+            window.alterarQuantidade = function(delta){
+                const qtyInput = document.getElementById("quantidade");
+                const qtyDisplay = document.getElementById("quantidade-display");
+                let novaQty = parseInt(qtyInput.value) + delta;
+                if (isNaN(novaQty) || novaQty < 1) novaQty = 1;
+                qtyInput.value = novaQty;
+                qtyDisplay.innerText = novaQty;
             };
 
             window.verHistorico = async function(){
@@ -460,43 +615,14 @@
                 } catch (e) { console.error("Erro ao buscar histórico: ", e); container.innerHTML = "<p>Erro ao buscar seu histórico.</p>"; }
             };
 
-            window.verCarrinho = function() {
-                window.fecharHistorico();
-                mostrarView('carrinhoDetalhado');
-                const container = document.getElementById("carrinhoDetalhado");
-                if (cart.length === 0) { container.style.display = "none"; return; }
-                const lang = dicionario[idioma];
-                let html = `<h3>Itens no Carrinho <button onclick="fecharCarrinho()" style="font-size: 14px; cursor: pointer; float: right;">${lang.fechar}</button></h3>`;
-                cart.forEach((item, i) => {
-                    html += `<div class='cart-item'><span>${item.nome} - R$ ${item.preco.toFixed(2).replace(".", ",")} x ${item.quantidade} = <strong>R$ ${item.total.toFixed(2).replace(".", ",")}</strong></span><button onclick='removerItem(${i})'>🗑️</button></div>`;
-                });
-                container.innerHTML = html;
-            };
-
-            window.editarProduto = async function(){
-                if (!barcodeAtual) return alert("Nenhum produto selecionado para editar.");
-                const nomeInput = document.getElementById("produto-nome");
-                const nomeAtual = nomeInput.value;
-                const nomeCorrigido = prompt("Digite o nome correto para este produto:", nomeAtual);
-                if (nomeCorrigido && nomeCorrigido.trim() !== "" && nomeCorrigido.trim() !== nomeAtual) {
-                    try {
-                        const correcaoRef = doc(db, "usuarios", user.uid, "correcoes", barcodeAtual);
-                        await setDoc(correcaoRef, { nome: nomeCorrigido.trim() });
-                        nomeInput.value = nomeCorrigido.trim();
-                        alert("Sua correção pessoal foi salva com sucesso!");
-                    } catch (e) { console.error("Erro ao salvar correção: ", e); alert("Ocorreu um erro ao salvar sua correção."); }
-                }
-            };
-            
-            window.reportarErro = function(){
-                if (!barcodeAtual) return alert("Nenhum produto selecionado.");
-                if (confirm("Reportar um erro neste produto?")) {
-                    alert(`Produto ${barcodeAtual} reportado! Obrigado.`);
-                }
-            };
-            
+            // ---------- inicializações ----------
             atualizarTextos();
             mostrarView('mainContent');
+
+            // salvar estado ao sair/atualizar a página
+            window.addEventListener('beforeunload', (e) => {
+              salvarCarrinho();
+            });
 
         });
     } catch (e) {
