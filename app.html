@@ -8,20 +8,48 @@
   <style>
     body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #fff; }
     .header { background-color: #d40000; padding: 15px; text-align: center; color: white; position: relative; display: flex; align-items: center; justify-content: space-between; }
-    .header h1 { font-size: 24px; margin: 0; }
+    .header h1 { font-size: 24px; margin: 0; flex: 1; }
+    .cart-icon { position: relative; cursor: pointer; font-size: 24px; }
+    .cart-count { position: absolute; top: -8px; right: -8px; background-color: #fff; color: #d40000; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; }
     .container { max-width: 500px; margin: 0 auto; text-align: center; padding: 16px; visibility: hidden; }
     .btn { display: block; width: 100%; background-color: #d40000; color: white; padding: 12px; margin: 8px 0; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; }
+    .btn:hover { background-color: #b30000; }
+    .btn:disabled { background-color: #ccc; cursor: not-allowed; }
     .input-field { width: 100%; padding: 10px; margin: 10px 0; box-sizing: border-box; font-size: 16px; border: 1px solid #ccc; border-radius: 4px; }
     #reader { width: 100%; height: 250px; border: 1px solid #ccc; margin: 10px 0; display: none; }
-    .product-img { max-width: 100%; height: auto; margin: 10px 0; }
+    .product-img { max-width: 100%; height: auto; margin: 10px 0; border-radius: 8px; }
     .error-message { color: #d40000; margin: 10px 0; font-size: 14px; }
     .loading { color: #666; margin: 10px 0; font-size: 14px; }
+    .product-details { background: #f9f9f9; padding: 15px; border-radius: 8px; margin: 10px 0; }
+    .quantity-controls { display: flex; align-items: center; justify-content: center; gap: 15px; margin: 15px 0; }
+    .quantity-btn { width: 40px; height: 40px; border: none; border-radius: 50%; background-color: #d40000; color: white; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    .quantity-btn:hover { background-color: #b30000; }
+    .quantity-btn:disabled { background-color: #ccc; cursor: not-allowed; }
+    .quantity-display { font-size: 18px; font-weight: bold; min-width: 30px; }
+    .price-total { font-size: 16px; font-weight: bold; color: #d40000; margin: 10px 0; }
+    .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
+    .modal-content { background-color: #fefefe; margin: 5% auto; padding: 20px; border-radius: 8px; width: 90%; max-width: 500px; max-height: 80%; overflow-y: auto; }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .close { color: #aaa; font-size: 28px; font-weight: bold; cursor: pointer; }
+    .close:hover { color: #000; }
+    .cart-item { background: #f9f9f9; padding: 15px; margin: 10px 0; border-radius: 8px; }
+    .cart-item-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .cart-item-name { font-weight: bold; flex: 1; text-align: left; }
+    .remove-item { background: #ff4444; color: white; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer; font-size: 12px; }
+    .cart-item-details { display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
+    .cart-total { background: #d40000; color: white; padding: 15px; border-radius: 8px; margin-top: 20px; font-size: 18px; font-weight: bold; }
+    .empty-cart { text-align: center; color: #666; margin: 40px 0; }
   </style>
 </head>
 <body>
   <div class="header">
     <h1>Scanlist Market</h1>
+    <div class="cart-icon" onclick="abrirCarrinho()">
+      🛒
+      <span class="cart-count" id="cart-count" style="display: none;">0</span>
+    </div>
   </div>
+  
   <div class="container">
     <div id="mainContent">
         <input id="codigoBarra" class="input-field" placeholder="Digite ou escaneie o código">
@@ -30,20 +58,49 @@
         <div id="reader"></div>
         <div id="error-message" class="error-message" style="display:none;"></div>
         <div id="loading-message" class="loading" style="display:none;">Carregando...</div>
-        <div id="produto-info" style="display:none;">
+        
+        <div id="produto-info" class="product-details" style="display:none;">
             <img id="produto-imagem" class="product-img" src="" alt="Imagem do Produto">
             <div>
                 <input id="produto-nome" type="text" class="input-field" placeholder="Nome do produto">
-                <input id="preco-unitario" type="number" class="input-field" placeholder="Preço unitário">
+                <input id="preco-unitario" type="number" class="input-field" placeholder="Preço unitário (R$)" step="0.01" min="0">
             </div>
+            
+            <div class="quantity-controls">
+                <button class="quantity-btn" onclick="alterarQuantidade(-1)">-</button>
+                <span class="quantity-display" id="quantidade">1</span>
+                <button class="quantity-btn" onclick="alterarQuantidade(1)">+</button>
+            </div>
+            
+            <div class="price-total" id="total-produto">Total: R$ 0,00</div>
+            
             <button id="btnAddCarrinho" class="btn" onclick="adicionarAoCarrinho()">➕ Adicionar ao Carrinho</button>
         </div>
+    </div>
+  </div>
+
+  <!-- Modal do Carrinho -->
+  <div id="modalCarrinho" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Carrinho de Compras</h2>
+        <span class="close" onclick="fecharCarrinho()">&times;</span>
+      </div>
+      <div id="lista-carrinho"></div>
+      <div id="total-carrinho" class="cart-total" style="display:none;">
+        Total Geral: R$ 0,00
+      </div>
+      <button class="btn" onclick="limparCarrinho()" style="background-color: #ff4444; margin-top: 10px;">
+        🗑️ Limpar Carrinho
+      </button>
     </div>
   </div>
 
   <script type="module">
     let scannerAtivo = false;
     let html5QrCodeInstance = null;
+    let carrinho = [];
+    let quantidadeAtual = 1;
 
     // Função para mostrar mensagens de erro
     const mostrarErro = (mensagem) => {
@@ -123,7 +180,7 @@
         try {
             html5QrCodeInstance = new Html5Qrcode("reader");
 
-            // Configurações otimizadas para iOS
+            // Configurações otimizadas para iOS e Android
             const config = { 
                 fps: 10, 
                 qrbox: { width: 250, height: 150 },
@@ -134,7 +191,7 @@
                 }
             };
 
-            // Configuração da câmera otimizada para iOS
+            // Configuração da câmera otimizada para iOS e Android
             const cameraConfig = { 
                 facingMode: { ideal: "environment" },
                 width: { ideal: 1280, min: 640 },
@@ -151,7 +208,6 @@
 
             const onScanFailure = (error) => {
                 // Não logar erros de scan failure para evitar spam no console
-                // console.log("Falha ao escanear: ", error);
             };
 
             await html5QrCodeInstance.start(cameraConfig, config, onScanSuccess, onScanFailure);
@@ -225,6 +281,13 @@
                     } else {
                         imagemElement.style.display = 'none';
                     }
+                    
+                    // Resetar quantidade e preço
+                    quantidadeAtual = 1;
+                    document.getElementById("quantidade").textContent = quantidadeAtual;
+                    document.getElementById("preco-unitario").value = '';
+                    atualizarTotalProduto();
+                    
                     document.getElementById("produto-info").style.display = 'block';
                 } else {
                     mostrarErro("Produto não encontrado na base de dados.");
@@ -237,9 +300,26 @@
             });
     };
 
+    const alterarQuantidade = (delta) => {
+        const novaQuantidade = quantidadeAtual + delta;
+        if (novaQuantidade >= 1) {
+            quantidadeAtual = novaQuantidade;
+            document.getElementById("quantidade").textContent = quantidadeAtual;
+            atualizarTotalProduto();
+        }
+    };
+
+    const atualizarTotalProduto = () => {
+        const preco = parseFloat(document.getElementById("preco-unitario").value) || 0;
+        const total = preco * quantidadeAtual;
+        document.getElementById("total-produto").textContent = `Total: R$ ${total.toFixed(2).replace('.', ',')}`;
+    };
+
     const adicionarAoCarrinho = () => {
         const nome = document.getElementById("produto-nome").value.trim();
         const preco = parseFloat(document.getElementById("preco-unitario").value);
+        const codigo = document.getElementById("codigoBarra").value.trim();
+        const imagemSrc = document.getElementById("produto-imagem").src;
         
         if (!nome) {
             mostrarErro("Preencha o nome do produto.");
@@ -250,20 +330,135 @@
             mostrarErro("Preencha um preço válido.");
             return;
         }
+
+        // Verificar se o produto já existe no carrinho
+        const produtoExistente = carrinho.find(item => item.codigo === codigo);
         
-        alert(`Produto "${nome}" adicionado ao carrinho por R$ ${preco.toFixed(2)}.`);
+        if (produtoExistente) {
+            produtoExistente.quantidade += quantidadeAtual;
+            produtoExistente.total = produtoExistente.preco * produtoExistente.quantidade;
+        } else {
+            const novoProduto = {
+                codigo: codigo,
+                nome: nome,
+                preco: preco,
+                quantidade: quantidadeAtual,
+                total: preco * quantidadeAtual,
+                imagem: imagemSrc
+            };
+            carrinho.push(novoProduto);
+        }
+
+        atualizarContadorCarrinho();
         
         // Limpar campos após adicionar
         document.getElementById("codigoBarra").value = '';
         document.getElementById("produto-nome").value = '';
         document.getElementById("preco-unitario").value = '';
         document.getElementById("produto-info").style.display = 'none';
+        quantidadeAtual = 1;
+        
+        // Mostrar feedback
+        mostrarErro = (mensagem) => {
+            const errorDiv = document.getElementById('error-message');
+            errorDiv.textContent = mensagem;
+            errorDiv.style.display = 'block';
+            errorDiv.style.color = '#28a745'; // Verde para sucesso
+            setTimeout(() => {
+                errorDiv.style.display = 'none';
+                errorDiv.style.color = '#d40000'; // Voltar ao vermelho
+            }, 3000);
+        };
+        mostrarErro(`Produto "${nome}" adicionado ao carrinho!`);
+    };
+
+    const atualizarContadorCarrinho = () => {
+        const contador = document.getElementById('cart-count');
+        const totalItens = carrinho.reduce((total, item) => total + item.quantidade, 0);
+        
+        if (totalItens > 0) {
+            contador.textContent = totalItens;
+            contador.style.display = 'flex';
+        } else {
+            contador.style.display = 'none';
+        }
+    };
+
+    const abrirCarrinho = () => {
+        const modal = document.getElementById('modalCarrinho');
+        const listaCarrinho = document.getElementById('lista-carrinho');
+        const totalCarrinho = document.getElementById('total-carrinho');
+        
+        if (carrinho.length === 0) {
+            listaCarrinho.innerHTML = '<div class="empty-cart">Seu carrinho está vazio</div>';
+            totalCarrinho.style.display = 'none';
+        } else {
+            let html = '';
+            let totalGeral = 0;
+            
+            carrinho.forEach((item, index) => {
+                totalGeral += item.total;
+                html += `
+                    <div class="cart-item">
+                        <div class="cart-item-header">
+                            <span class="cart-item-name">${item.nome}</span>
+                            <button class="remove-item" onclick="removerDoCarrinho(${index})">Remover</button>
+                        </div>
+                        <div class="cart-item-details">
+                            <span>Preço unitário: R$ ${item.preco.toFixed(2).replace('.', ',')}</span>
+                            <span>Qtd: ${item.quantidade}</span>
+                            <span>Total: R$ ${item.total.toFixed(2).replace('.', ',')}</span>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            listaCarrinho.innerHTML = html;
+            totalCarrinho.innerHTML = `Total Geral: R$ ${totalGeral.toFixed(2).replace('.', ',')}`;
+            totalCarrinho.style.display = 'block';
+        }
+        
+        modal.style.display = 'block';
+    };
+
+    const fecharCarrinho = () => {
+        document.getElementById('modalCarrinho').style.display = 'none';
+    };
+
+    const removerDoCarrinho = (index) => {
+        carrinho.splice(index, 1);
+        atualizarContadorCarrinho();
+        abrirCarrinho(); // Atualizar a exibição
+    };
+
+    const limparCarrinho = () => {
+        if (confirm('Tem certeza que deseja limpar todo o carrinho?')) {
+            carrinho = [];
+            atualizarContadorCarrinho();
+            abrirCarrinho(); // Atualizar a exibição
+        }
     };
 
     // Tornar as funções globais
     window.escanearProduto = startScanner;
     window.buscarProduto = buscarProduto;
+    window.alterarQuantidade = alterarQuantidade;
     window.adicionarAoCarrinho = adicionarAoCarrinho;
+    window.abrirCarrinho = abrirCarrinho;
+    window.fecharCarrinho = fecharCarrinho;
+    window.removerDoCarrinho = removerDoCarrinho;
+    window.limparCarrinho = limparCarrinho;
+
+    // Atualizar total do produto quando o preço mudar
+    document.getElementById("preco-unitario").addEventListener('input', atualizarTotalProduto);
+
+    // Fechar modal clicando fora dele
+    window.addEventListener('click', (event) => {
+        const modal = document.getElementById('modalCarrinho');
+        if (event.target === modal) {
+            fecharCarrinho();
+        }
+    });
 
     // Mostrar o container quando a página carregar
     document.addEventListener('DOMContentLoaded', () => {
