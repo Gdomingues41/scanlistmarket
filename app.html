@@ -184,9 +184,9 @@
             
             let idioma = localStorage.getItem('scanlistMarketIdioma') || 'pt';
 
-            function atualizarTextos() { /* (Omitido para brevidade) */ }
+            function atualizarTextos() { /* ... */ }
             
-            // FUNÇÕES DE NAVEGAÇÃO E UTILITÁRIAS (Garantidas no window)
+            // FUNÇÕES DE NAVEGAÇÃO E UTILITÁRIAS
             window.abrirMenu = function() { document.getElementById("mySideMenu").style.left = "0"; document.getElementById("overlay").style.width = "100%"; };
             window.fecharMenu = function() { document.getElementById("mySideMenu").style.left = "-250px"; document.getElementById("overlay").style.width = "0"; };
             window.logout = function() { if (confirm("Tem certeza que deseja sair?")) { signOut(auth).then(() => { window.location.href = 'index.html'; }); } };
@@ -197,7 +197,7 @@
             window.irParaScanner = function(){ mostrarView('mainContent'); document.getElementById('codigoBarra').focus(); };
             
             function mostrarView(viewId) {
-                window.stopScanner(); // Parar scanner ao mudar de tela
+                window.stopScanner(); 
                 document.getElementById('mainContent').style.display = 'none';
                 document.getElementById('historicoContainer').innerHTML = '';
                 document.getElementById('viewListas').style.display = 'none';
@@ -215,8 +215,8 @@
                 document.getElementById("quantidade-display").innerText = newQtd;
             };
 
-            function salvarCarrinho() { /* (Omitido) */ }
-            function carregarCarrinho() { /* (Omitido) */ }
+            function salvarCarrinho() { /* ... */ }
+            function carregarCarrinho() { /* ... */ }
             
             function atualizarCarrinho() {
               document.getElementById("cartCount").innerText = cart.length;
@@ -235,7 +235,7 @@
               salvarCarrinho();
             }
 
-            async function salvarPrecoPessoal(ean, nome, preco) { /* (Omitido) */ }
+            async function salvarPrecoPessoal(ean, nome, preco) { /* ... */ }
 
             window.adicionarAoCarrinho = function(){
                 const nome = document.getElementById("produto-nome").value;
@@ -279,23 +279,22 @@
                 container.innerHTML = html;
             };
 
-            window.finalizarCompra = async function(){ /* (Omitido) */ };
+            window.finalizarCompra = async function(){ /* ... */ };
 
             // ---------- Funções de Lista e Histórico (Estrutura Completa) ----------
-            window.carregarListasDoUsuario = async function() { /* (Omitido) */ };
+            window.carregarListasDoUsuario = async function() { /* ... */ };
             window.mostrarViewListas = function() { window.fecharMenu(); mostrarView('viewListas'); window.carregarListasDoUsuario(); };
-            window.criarNovaLista = async function() { /* (Omitido) */ };
-            async function carregarItensDaLista(idDaLista) { /* (Omitido) */ }
-            window.abrirLista = function(idDaLista, nomeDaLista) { /* (Omitido) */ };
-            window.adicionarItemNaLista = function() { /* (Omitido) */ };
-            window.removerItemDaLista = function(itemId) { /* (Omitido) */ };
-            window.marcarItemComoComprado = function(event, itemId, estadoAtual) { /* (Omitido) */ };
-            window.verHistorico = async function(){ /* (Omitido) */ };
-            window.editarProduto = async function(){ /* (Omitido) */ };
-            window.reportarErro = function(){ /* (Omitido) */ };
+            window.criarNovaLista = async function() { /* ... */ };
+            async function carregarItensDaLista(idDaLista) { /* ... */ }
+            window.abrirLista = function(idDaLista, nomeDaLista) { /* ... */ };
+            window.adicionarItemNaLista = function() { /* ... */ };
+            window.removerItemDaLista = function(itemId) { /* ... */ };
+            window.marcarItemComoComprado = function(event, itemId, estadoAtual) { /* ... */ };
+            window.verHistorico = async function(){ /* ... */ };
+            window.editarProduto = async function(){ /* ... */ };
+            window.reportarErro = function(){ /* ... */ };
 
-            // ---------- FUNÇÕES CORRIGIDAS DE SCANNER E BUSCA ----------
-
+            // FUNÇÕES DE BUSCA E SCANNER
             window.iniciarCadastroManual = function(buscando = false, preenchedor = null){
                 barcodeAtual = buscando ? barcodeAtual : null;
                 document.getElementById("produto-info").style.display = "block";
@@ -326,9 +325,62 @@
             
             window.cadastrarProdutoManual = () => window.iniciarCadastroManual(false);
 
-            window.buscarProduto = async function(){ /* (Omitido) */ };
+            window.buscarProduto = async function(){
+                if (!user) { alert("Por favor, aguarde o carregamento ou verifique seu login."); return; }
+                
+                const code = document.getElementById("codigoBarra").value.trim();
+                if (!code) return alert("Digite um código de barras válido.");
+                
+                barcodeAtual = code;
+                window.iniciarCadastroManual(true);
+                
+                let preenchedor = {};
+                
+                // 1. Tenta buscar HISTÓRICO DE PREÇOS PESSOAIS no Firestore
+                try {
+                    const precoRef = doc(db, "usuarios", user.uid, "precos_pessoais", code);
+                    const docSnap = await getDoc(precoRef);
 
-            // Função para parar o scanner (Garantida no window)
+                    if (docSnap.exists()) {
+                        const data = docSnap.data();
+                        preenchedor.nome = data.nome;
+                        preenchedor.preco = data.ultimo_preco;
+                        const dataFormatada = data.data_atualizacao ? data.data_atualizacao.toDate().toLocaleDateString(idioma === 'pt' ? 'pt-BR' : 'en-US') : 'desconhecida';
+                        preenchedor.infoUltimoPreco = dicionario[idioma].infoUltimoPreco.replace("{preco}", data.ultimo_preco.toFixed(2).replace(".", ",")).replace("{data}", dataFormatada);
+                        preenchedor.imagem = data.imagem_url || "";
+                        document.getElementById("product-actions-wrapper").style.display = "flex";
+                        window.iniciarCadastroManual(true, preenchedor);
+                        return; // SUCESSO DO FIREBASE
+                    }
+                } catch(e) { 
+                    console.error("Erro ao buscar histórico pessoal (Ignorando e indo para API):", e); 
+                    // Permite que o código continue para a API
+                }
+
+                // 2. Tenta buscar na Open Food Facts
+                try {
+                    const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${code}.json`);
+                    const data = await res.json();
+                    
+                    if (data.status === 1 && data.product) {
+                        const produto = data.product;
+                        preenchedor.nome = produto.product_name || "Produto sem nome";
+                        preenchedor.imagem = produto.image_url || "";
+                        document.getElementById("product-actions-wrapper").style.display = "flex";
+                        window.iniciarCadastroManual(true, preenchedor);
+                    } else { 
+                        // 3. Produto não encontrado na API: Vai para cadastro manual
+                        window.iniciarCadastroManual(false); 
+                        alert("Produto não encontrado no banco de dados. Cadastre manualmente.");
+                    }
+                } catch(e) {
+                    // 4. Falha de rede/conexão na API: Vai para cadastro manual
+                    console.error("Erro de conexão com Open Food Facts:", e);
+                    window.iniciarCadastroManual(false);
+                    alert("Erro de conexão. Cadastre o produto manualmente.");
+                }
+            };
+
             window.stopScanner = function() {
               const readerWrapper = document.getElementById('reader-wrapper');
               if (!scannerAtivo) { readerWrapper.style.display = 'none'; return; }
@@ -342,7 +394,7 @@
               }
             }
             
-            // Função para iniciar o scanner (Garantida no window)
+            // FUNÇÃO CORRIGIDA: Escopo garantido e lógica de câmera ok
             window.escanearProduto = async function(){
                 if (scannerAtivo) { window.stopScanner(); return; }
                 
@@ -363,7 +415,7 @@
                     window.buscarProduto();
                 };
 
-                const onScanFailure = (error) => { /* Não poluir o console com falhas normais */ };
+                const onScanFailure = (error) => { /* ... */ };
 
                 try {
                     await html5QrCodeInstance.start(cameraConfig, config, onScanSuccess, onScanFailure);
