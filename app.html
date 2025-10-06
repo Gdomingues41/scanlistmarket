@@ -448,8 +448,9 @@
                 }
                 
                 const config = { fps: 10, qrbox: { width: 250, height: 150 } };
-                // Usar facingMode ideal para câmera traseira, melhor em Android e iOS
-                const cameraConfig = { facingMode: { ideal: "environment" } };
+                
+                // NOVO AJUSTE: Simplificamos a configuração do facingMode para resolver o erro
+                const cameraConfig = { facingMode: "environment" };
 
                 const onScanSuccess = (decodedText, decodedResult) => {
                     // Parar o scanner imediatamente após o sucesso
@@ -469,7 +470,7 @@
                 } catch (err) {
                     console.error("Erro ao iniciar scanner:", err);
                     stopScanner();
-                    alert("Não foi possível acessar a câmera. Tente recarregar a página e garantir que você a abriu em um navegador (e não em um app de terceiros).");
+                    alert("Erro ao iniciar a câmera. Verifique permissões. (Código do erro: " + err.message + ")");
                 }
             };
 
