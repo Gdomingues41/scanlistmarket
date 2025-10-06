@@ -184,22 +184,20 @@
             
             let idioma = localStorage.getItem('scanlistMarketIdioma') || 'pt';
 
-            function atualizarTextos() { /* (Omitido) */ }
+            function atualizarTextos() { /* (Omitido para brevidade) */ }
             
-            // FUNÇÕES CORRIGIDAS: Menu e Navegação (Definidas no Window para acesso do HTML)
+            // FUNÇÕES DE NAVEGAÇÃO E UTILITÁRIAS (Garantidas no window)
             window.abrirMenu = function() { document.getElementById("mySideMenu").style.left = "0"; document.getElementById("overlay").style.width = "100%"; };
             window.fecharMenu = function() { document.getElementById("mySideMenu").style.left = "-250px"; document.getElementById("overlay").style.width = "0"; };
-            
             window.logout = function() { if (confirm("Tem certeza que deseja sair?")) { signOut(auth).then(() => { window.location.href = 'index.html'; }); } };
             window.toggleAcessibilidade = function() { document.body.classList.toggle("big-font"); window.fecharMenu(); };
             window.mudarIdioma = function() { idioma = (idioma === 'pt') ? 'en' : 'pt'; localStorage.setItem('scanlistMarketIdioma', idioma); atualizarTextos(); window.fecharMenu(); };
-            
             window.fecharHistorico = function() { mostrarView('mainContent'); };
             window.fecharCarrinho = function() { mostrarView('mainContent'); };
             window.irParaScanner = function(){ mostrarView('mainContent'); document.getElementById('codigoBarra').focus(); };
             
             function mostrarView(viewId) {
-                stopScanner(); 
+                window.stopScanner(); // Parar scanner ao mudar de tela
                 document.getElementById('mainContent').style.display = 'none';
                 document.getElementById('historicoContainer').innerHTML = '';
                 document.getElementById('viewListas').style.display = 'none';
@@ -265,7 +263,6 @@
                 if (document.getElementById('carrinhoDetalhado').style.display !== 'none') { window.verCarrinho(); }
             };
             
-            // FUNÇÃO CORRIGIDA: Abertura do Carrinho (Definida no Window)
             window.verCarrinho = function() {
                 window.fecharMenu();
                 mostrarView('carrinhoDetalhado');
@@ -297,16 +294,57 @@
             window.editarProduto = async function(){ /* (Omitido) */ };
             window.reportarErro = function(){ /* (Omitido) */ };
 
-            // FUNÇÕES CORRIGIDAS: Scanner e Busca
-            window.iniciarCadastroManual = function(buscando = false, preenchedor = null){ /* (Omitido) */ };
+            // ---------- FUNÇÕES CORRIGIDAS DE SCANNER E BUSCA ----------
+
+            window.iniciarCadastroManual = function(buscando = false, preenchedor = null){
+                barcodeAtual = buscando ? barcodeAtual : null;
+                document.getElementById("produto-info").style.display = "block";
+                document.getElementById("product-actions-wrapper").style.display = "none";
+                document.getElementById("produto-imagem").src = "";
+                document.getElementById("produto-imagem").style.display = "block";
+                document.getElementById("produto-nome").value = buscando ? "Buscando produto..." : "";
+                document.getElementById("preco-unitario").value = "";
+                document.getElementById("quantidade").value = "1";
+                document.getElementById("quantidade-display").innerText = "1";
+                document.getElementById("ultimaCompraInfo").style.display = "none";
+
+                if (preenchedor) {
+                    document.getElementById("produto-nome").value = preenchedor.nome || "";
+                    if (preenchedor.preco) {
+                        document.getElementById("preco-unitario").value = preenchedor.preco.toFixed(2);
+                        document.getElementById("ultimaCompraInfo").innerText = preenchedor.infoUltimoPreco;
+                        document.getElementById("ultimaCompraInfo").style.display = "block";
+                    }
+                    if (preenchedor.imagem) {
+                         document.getElementById("produto-imagem").src = preenchedor.imagem;
+                    }
+                    document.getElementById("preco-unitario").focus();
+                } else if (!buscando) {
+                    document.getElementById("produto-nome").focus();
+                }
+            };
+            
             window.cadastrarProdutoManual = () => window.iniciarCadastroManual(false);
 
             window.buscarProduto = async function(){ /* (Omitido) */ };
 
-            window.stopScanner = function() { /* (Omitido) */ }
+            // Função para parar o scanner (Garantida no window)
+            window.stopScanner = function() {
+              const readerWrapper = document.getElementById('reader-wrapper');
+              if (!scannerAtivo) { readerWrapper.style.display = 'none'; return; }
+              
+              if (html5QrCodeInstance) {
+                html5QrCodeInstance.stop()
+                  .then(() => { readerWrapper.style.display = 'none'; scannerAtivo = false; })
+                  .catch(err => { console.warn("Erro ao parar scanner:", err); readerWrapper.style.display = 'none'; scannerAtivo = false; });
+              } else {
+                 readerWrapper.style.display = 'none'; scannerAtivo = false;
+              }
+            }
             
+            // Função para iniciar o scanner (Garantida no window)
             window.escanearProduto = async function(){
-                if (scannerAtivo) { stopScanner(); return; }
+                if (scannerAtivo) { window.stopScanner(); return; }
                 
                 console.log("Tentando iniciar scanner..."); 
                 
@@ -320,12 +358,12 @@
 
                 const onScanSuccess = (decodedText, decodedResult) => {
                     console.log("Scanner SUCESSO. Código lido:", decodedText); 
-                    stopScanner(); 
+                    window.stopScanner(); 
                     document.getElementById("codigoBarra").value = decodedText;
                     window.buscarProduto();
                 };
 
-                const onScanFailure = (error) => { /* ... */ };
+                const onScanFailure = (error) => { /* Não poluir o console com falhas normais */ };
 
                 try {
                     await html5QrCodeInstance.start(cameraConfig, config, onScanSuccess, onScanFailure);
@@ -333,7 +371,7 @@
                     console.log("Scanner iniciado com sucesso. Aguardando leitura."); 
                 } catch (err) {
                     console.error("ERRO CRÍTICO ao iniciar scanner:", err); 
-                    stopScanner();
+                    window.stopScanner();
                     alert("Erro ao iniciar a câmera. Verifique permissões. (Causa: " + (err.message || 'Desconhecida') + ")");
                 }
             };
