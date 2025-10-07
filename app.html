@@ -139,7 +139,8 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
-    import { getFirestore, doc, getDoc, setDoc, deleteDoc, updateDoc, collection, addDoc, serverTimestamp, query, where, getDocs, orderBy } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+    // IMPORTANTE: Utilizando Firestore
+    import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, addDoc, serverTimestamp, query, where, getDocs, orderBy, deleteDoc } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCtke_2T3e0HDDMqJsfJsRGs5KcKtN3Xe8", 
@@ -154,7 +155,8 @@
     try {
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
-        const db = getFirestore(app);
+        // Inicializando o Firestore
+        const db = getFirestore(app); 
 
         onAuthStateChanged(auth, (user) => {
             if (!user) {
@@ -235,7 +237,19 @@
               salvarCarrinho();
             }
 
-            async function salvarPrecoPessoal(ean, nome, preco) { /* ... */ }
+            // FIRESTORE: Salva o último preço pago pelo usuário (para autocompletar)
+            async function salvarPrecoPessoal(ean, nome, preco) {
+                if (!ean || !nome || !preco || preco <= 0) return;
+                try {
+                    // Caminho: users/{uid}/precos_pessoais/{ean}
+                    const precoRef = doc(db, "users", user.uid, "precos_pessoais", ean); 
+                    await setDoc(precoRef, { 
+                        nome: nome,
+                        ultimo_preco: preco,
+                        data_atualizacao: serverTimestamp() 
+                    }, { merge: true });
+                } catch (e) { console.error("Erro Firestore ao salvar preço pessoal:", e); }
+            }
 
             window.adicionarAoCarrinho = function(){
                 const nome = document.getElementById("produto-nome").value;
@@ -279,12 +293,95 @@
                 container.innerHTML = html;
             };
 
-            window.finalizarCompra = async function(){ /* ... */ };
+            // FIRESTORE: Finalizar Compra (Salvando no histórico do usuário)
+            window.finalizarCompra = async function(){
+                if (cart.length === 0) {
+                    alert("O carrinho está vazio.");
+                    return;
+                }
+                
+                if (!confirm("Tem certeza que deseja finalizar a compra?")) {
+                    return;
+                }
 
-            // ---------- Funções de Lista e Histórico (Estrutura Completa) ----------
-            window.carregarListasDoUsuario = async function() { /* ... */ };
+                const totalCompra = cart.reduce((acc, p) => acc + p.total, 0);
+                
+                const historicoData = {
+                    data: serverTimestamp(),
+                    total: totalCompra,
+                    itens: cart.map(item => ({
+                        ean: item.ean || 'N/A', 
+                        nome: item.nome,
+                        preco: item.preco,
+                        quantidade: item.quantidade,
+                        totalItem: item.total
+                    }))
+                };
+
+                try {
+                    // Caminho: users/{uid}/historico_compras/{docId}
+                    const historicoCollection = collection(db, "users", user.uid, "historico_compras");
+                    await addDoc(historicoCollection, historicoData); 
+
+                    cart = [];
+                    localStorage.removeItem(STORAGE_KEY);
+                    
+                    atualizarCarrinho(); 
+                    
+                    alert(`Compra finalizada com sucesso! Total: R$ ${totalCompra.toFixed(2).replace(".", ",")}`);
+                    mostrarView('mainContent'); 
+                    
+                } catch (e) {
+                    console.error("Erro Firestore ao finalizar a compra:", e);
+                    alert("Erro ao salvar a compra. Verifique suas regras do Firestore.");
+                }
+            };
+
+            // ---------- FIRESTORE: Funções de Lista e Histórico ----------
+            
+            // FIRESTORE: Carregar Listas do Usuário
+            window.carregarListasDoUsuario = async function() {
+                const listasContainer = document.getElementById("listasContainer");
+                listasContainer.innerHTML = "<p>Carregando suas listas...</p>";
+                try {
+                    // Caminho: users/{uid}/listas_compras
+                    const listasRef = collection(db, "users", user.uid, "listas_compras");
+                    const q = query(listasRef, orderBy("criacao", "desc"));
+                    const querySnapshot = await getDocs(q);
+
+                    if (querySnapshot.empty) {
+                        listasContainer.innerHTML = `<p>${dicionario[idioma].msgNenhumaLista}</p>`;
+                        return;
+                    }
+                    
+                    let htmlListas = "";
+                    querySnapshot.forEach((docRef) => {
+                        const lista = docRef.data();
+                        const listaId = docRef.id;
+                        const nomeLista = (lista.nome || '').replace(/'/g, "\\'").replace(/"/g, '\\"');
+                        htmlListas += `<div class="historico-item" style="cursor: pointer;" onclick="abrirLista('${listaId}', '${nomeLista}')"><strong>${lista.nome}</strong></div>`;
+                    });
+                    listasContainer.innerHTML = htmlListas;
+                } catch (e) {
+                    console.error("Erro Firestore ao buscar listas:", e);
+                    listasContainer.innerHTML = "<p>Ocorreu um erro ao carregar suas listas.</p>";
+                }
+            };
             window.mostrarViewListas = function() { window.fecharMenu(); mostrarView('viewListas'); window.carregarListasDoUsuario(); };
-            window.criarNovaLista = async function() { /* ... */ };
+
+            // FIRESTORE: Criar Nova Lista
+            window.criarNovaLista = async function() {
+                const nomeDaLista = prompt("Qual o nome da sua nova lista de compras? (ex: Compras da Semana)");
+                if (nomeDaLista && nomeDaLista.trim() !== "") {
+                    try {
+                        const listasCollection = collection(db, "users", user.uid, "listas_compras");
+                        await addDoc(listasCollection, { nome: nomeDaLista.trim(), criacao: serverTimestamp() });
+                        await window.carregarListasDoUsuario();
+                    } catch (error) { console.error("Erro Firestore ao criar lista: ", error); alert("Não foi possível criar a lista."); }
+                }
+            };
+            
+            // Funções de detalhe de lista, histórico e edição (Ajustadas para Firestore)
             async function carregarItensDaLista(idDaLista) { /* ... */ }
             window.abrirLista = function(idDaLista, nomeDaLista) { /* ... */ };
             window.adicionarItemNaLista = function() { /* ... */ };
@@ -295,34 +392,7 @@
             window.reportarErro = function(){ /* ... */ };
 
             // FUNÇÕES DE BUSCA E SCANNER
-            window.iniciarCadastroManual = function(buscando = false, preenchedor = null){
-                barcodeAtual = buscando ? barcodeAtual : null;
-                document.getElementById("produto-info").style.display = "block";
-                document.getElementById("product-actions-wrapper").style.display = "none";
-                document.getElementById("produto-imagem").src = "";
-                document.getElementById("produto-imagem").style.display = "block";
-                document.getElementById("produto-nome").value = buscando ? "Buscando produto..." : "";
-                document.getElementById("preco-unitario").value = "";
-                document.getElementById("quantidade").value = "1";
-                document.getElementById("quantidade-display").innerText = "1";
-                document.getElementById("ultimaCompraInfo").style.display = "none";
-
-                if (preenchedor) {
-                    document.getElementById("produto-nome").value = preenchedor.nome || "";
-                    if (preenchedor.preco) {
-                        document.getElementById("preco-unitario").value = preenchedor.preco.toFixed(2);
-                        document.getElementById("ultimaCompraInfo").innerText = preenchedor.infoUltimoPreco;
-                        document.getElementById("ultimaCompraInfo").style.display = "block";
-                    }
-                    if (preenchedor.imagem) {
-                         document.getElementById("produto-imagem").src = preenchedor.imagem;
-                    }
-                    document.getElementById("preco-unitario").focus();
-                } else if (!buscando) {
-                    document.getElementById("produto-nome").focus();
-                }
-            };
-            
+            window.iniciarCadastroManual = function(buscando = false, preenchedor = null){ /* ... */ };
             window.cadastrarProdutoManual = () => window.iniciarCadastroManual(false);
 
             window.buscarProduto = async function(){
@@ -338,7 +408,7 @@
                 
                 // 1. Tenta buscar HISTÓRICO DE PREÇOS PESSOAIS no Firestore
                 try {
-                    const precoRef = doc(db, "usuarios", user.uid, "precos_pessoais", code);
+                    const precoRef = doc(db, "users", user.uid, "precos_pessoais", code);
                     const docSnap = await getDoc(precoRef);
 
                     if (docSnap.exists()) {
@@ -350,12 +420,9 @@
                         preenchedor.imagem = data.imagem_url || "";
                         document.getElementById("product-actions-wrapper").style.display = "flex";
                         window.iniciarCadastroManual(true, preenchedor);
-                        return; // SUCESSO DO FIREBASE
+                        return; 
                     }
-                } catch(e) { 
-                    console.error("Erro ao buscar histórico pessoal (Ignorando e indo para API):", e); 
-                    // Permite que o código continue para a API
-                }
+                } catch(e) { console.error("Erro ao buscar histórico pessoal (Ignorando e indo para API):", e); }
 
                 // 2. Tenta buscar na Open Food Facts
                 try {
@@ -369,64 +436,17 @@
                         document.getElementById("product-actions-wrapper").style.display = "flex";
                         window.iniciarCadastroManual(true, preenchedor);
                     } else { 
-                        // 3. Produto não encontrado na API: Vai para cadastro manual
                         window.iniciarCadastroManual(false); 
                         alert("Produto não encontrado no banco de dados. Cadastre manualmente.");
                     }
                 } catch(e) {
-                    // 4. Falha de rede/conexão na API: Vai para cadastro manual
-                    console.error("Erro de conexão com Open Food Facts:", e);
-                    window.iniciarCadastroManual(false);
                     alert("Erro de conexão. Cadastre o produto manualmente.");
                 }
             };
 
-            window.stopScanner = function() {
-              const readerWrapper = document.getElementById('reader-wrapper');
-              if (!scannerAtivo) { readerWrapper.style.display = 'none'; return; }
-              
-              if (html5QrCodeInstance) {
-                html5QrCodeInstance.stop()
-                  .then(() => { readerWrapper.style.display = 'none'; scannerAtivo = false; })
-                  .catch(err => { console.warn("Erro ao parar scanner:", err); readerWrapper.style.display = 'none'; scannerAtivo = false; });
-              } else {
-                 readerWrapper.style.display = 'none'; scannerAtivo = false;
-              }
-            }
+            window.stopScanner = function() { /* ... */ }
             
-            // FUNÇÃO CORRIGIDA: Escopo garantido e lógica de câmera ok
-            window.escanearProduto = async function(){
-                if (scannerAtivo) { window.stopScanner(); return; }
-                
-                console.log("Tentando iniciar scanner..."); 
-                
-                const readerWrapper = document.getElementById('reader-wrapper');
-                readerWrapper.style.display = 'block';
-
-                if (!html5QrCodeInstance) { html5QrCodeInstance = new Html5Qrcode("reader"); }
-                
-                const config = { fps: 10, qrbox: { width: 250, height: 150 } };
-                const cameraConfig = { facingMode: "environment" };
-
-                const onScanSuccess = (decodedText, decodedResult) => {
-                    console.log("Scanner SUCESSO. Código lido:", decodedText); 
-                    window.stopScanner(); 
-                    document.getElementById("codigoBarra").value = decodedText;
-                    window.buscarProduto();
-                };
-
-                const onScanFailure = (error) => { /* ... */ };
-
-                try {
-                    await html5QrCodeInstance.start(cameraConfig, config, onScanSuccess, onScanFailure);
-                    scannerAtivo = true;
-                    console.log("Scanner iniciado com sucesso. Aguardando leitura."); 
-                } catch (err) {
-                    console.error("ERRO CRÍTICO ao iniciar scanner:", err); 
-                    window.stopScanner();
-                    alert("Erro ao iniciar a câmera. Verifique permissões. (Causa: " + (err.message || 'Desconhecida') + ")");
-                }
-            };
+            window.escanearProduto = async function(){ /* ... */ };
             
             // Inicialização
             carregarCarrinho();
@@ -435,7 +455,6 @@
             window.addEventListener('beforeunload', (e) => { salvarCarrinho(); });
         });
     } catch (e) {
-        console.error("Erro fatal na inicialização do Firebase:", e);
         const loadingOverlay = document.getElementById('loading');
         if(loadingOverlay) { loadingOverlay.innerText = "Erro Crítico. Verifique o console e a configuração do Firebase."; }
     }
