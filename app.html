@@ -10,9 +10,9 @@
     .header { background-color: #d40000; padding: 15px; text-align: center; color: white; position: relative; display: flex; align-items: center; justify-content: space-between; }
     .header h1 { font-size: 24px; margin: 0; }
     .cart-icon { font-size: 24px; color: white; cursor: pointer; position: relative; }
-    .cart-count { background-color: #fff; color: #d40000; border-radius: 50%; padding: 2px 6px; font-size: 12px; position: absolute; top: -10px; right: -10px; border: 1px solid #d40000; }
+    .cart-count { background-color: #fff; color: #d40000; border-radius: 50%; padding: 2px 6px; font-size: 12px; position: absolute; top: -10px; right: -10px; border: 1px solid #d40000; display: none; }
     .container { max-width: 500px; margin: 0 auto; text-align: center; padding: 16px; visibility: hidden; }
-    .btn { display: block; width: 100%; background-color: #d40000; color: white; padding: 12px; margin: 8px 0; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; }
+    .btn { display: block; width: 100%; background-color: #d40000; color: white; padding: 12px; margin: 8px 0; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; box-sizing: border-box; }
     .btn-green { background-color: #28a745; }
     .btn:hover { opacity: 0.9; }
     .btn:disabled { background-color: #ccc; }
@@ -27,7 +27,10 @@
     .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #fff; display: flex; justify-content: center; align-items: center; z-index: 1002; font-size: 20px; font-weight: bold; color: #d40000; }
     .product-img { max-width: 200px; margin: 20px auto; display: block; }
     .cart-item { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ccc; padding: 8px 0; }
-    .cart-item button { background: none; border: none; color: red; font-size: 20px; cursor: pointer; }
+    .cart-item img { width: 50px; height: 50px; object-fit: cover; border-radius: 4px; margin-right: 10px; }
+    .cart-item div { flex-grow: 1; text-align: left; }
+    .cart-item button { background: none; border: none; color: red; font-size: 20px; cursor: pointer; flex-shrink: 0; }
+    .quantity-selector { display: flex; align-items: center; justify-content: center; margin-bottom: 15px; }
     .quantity-selector button { background: none; border: none; color: red; font-size: 24px; font-weight: bold; cursor: pointer; width: 40px; }
     .quantity-selector span { font-size: 20px; font-weight: bold; margin: 0 15px; }
     .historico-item { background-color: #f9f9f9; border: 1px solid #ddd; border-radius: 8px; padding: 10px; margin-bottom: 10px; text-align: left; }
@@ -65,7 +68,7 @@
         <input id="codigoBarra" class="input-field" placeholder="Digite ou escaneie o código">
         <button id="btnBuscar" class="btn" onclick="buscarProduto()">🔍 Buscar Produto</button>
         <button id="btnEscanear" class="btn" onclick="escanearProduto()">📷 Escanear Produto</button>
-        <button id="btnCadastrarManual" class="btn" onclick="cadastrarProdutoManual()">📝 Cadastrar Produto Manualmente</button>
+        <button id="btnCadastrarManual" class="btn" onclick="cadastrarProdutoManualmente()">📝 Cadastrar Produto Manualmente</button>
         <div id="produto-info" style="display:none; text-align: center;">
             <img id="produto-imagem" class="product-img" src="" alt="Imagem do Produto">
             <div class="product-name-container">
@@ -75,9 +78,9 @@
                     <button onclick="reportarErro()" title="Reportar erro">🚩</button>
                 </div>
             </div>
-            <input id="preco-unitario" type="number" class="input-field" placeholder="Preço unitário">
+            <input id="preco-unitario" type="number" class="input-field" placeholder="Preço unitário (Ex: 8.99)">
             <p id="qtdLabel" style="margin-top:15px; margin-bottom: 5px; font-weight: bold;">Quantidade:</p>
-            <div class="quantity-selector" style="display: flex; align-items: center; justify-content: center; margin-bottom: 15px;">
+            <div class="quantity-selector">
                 <button type="button" onclick="alterarQuantidade(-1)">-</button>
                 <span id="quantidade-display">1</span>
                 <button type="button" onclick="alterarQuantidade(1)">+</button>
@@ -107,13 +110,16 @@
     <div id="historicoContainer" style="margin-top: 20px;"></div>
     <div class="total-bar" id="totalBar" style="display: none;"></div>
     <button id="finalizarBtn" class="btn btn-green" style="display: none;" onclick="finalizarCompra()">🛒 Finalizar Compra</button>
-    <p style="margin-top: 24px; font-size: 14px;">Apoie o projeto 💖<br>Pix: <strong>biedomingues33@gmail.com</strong></p>
-    <div style="margin-top: 10px;">
-      <form action="https://www.paypal.com/donate" method="post" target="_blank">
-        <input type="hidden" name="business" value="biedomingues33@gmail.com">
-        <input type="hidden" name="currency_code" value="USD"><input type="hidden" name="amount" value="4.99">
-        <input type="submit" value="Doar via PayPal (US$4.99)" class="btn">
-      </form>
+    
+    <div id="support" style="margin-top: 24px; text-align: center;">
+      <p style="font-size: 14px;">Apoie o projeto 💖<br>Pix: <strong>biedomingues33@gmail.com</strong></p>
+      <div style="margin-top: 10px;">
+        <form action="https://www.paypal.com/donate" method="post" target="_blank">
+          <input type="hidden" name="business" value="biedomingues33@gmail.com">
+          <input type="hidden" name="currency_code" value="USD"><input type="hidden" name="amount" value="4.99">
+          <input type="submit" value="Doar via PayPal (US$4.99)" class="btn">
+        </form>
+      </div>
     </div>
   </div>
 
@@ -136,109 +142,428 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    // ==========================================================
-    // INÍCIO DO CÓDIGO DE CORREÇÃO DO SCANNER
-    // ==========================================================
+    // ================================================
+    // FUNÇÕES GLOBAIS (CHAMADAS PELO HTML)
+    // ================================================
 
-    let html5QrCodeScanner; // Variável para guardar a instância do scanner
-    // Configurações do scanner: 10 frames por segundo, caixa de 250x250px
+    // --- Funções do Scanner ---
+    let html5QrCodeScanner; 
     const config = { fps: 10, qrbox: { width: 250, height: 250 } };
 
-    // Função que é chamada quando o scanner lê um código com sucesso
     const onScanSuccess = (decodedText, decodedResult) => {
         console.log(`Código escaneado: ${decodedText}`, decodedResult);
-        
-        // Para o scanner
         if (html5QrCodeScanner && html5QrCodeScanner.getState() === 2) { // 2 = SCANNING
             html5QrCodeScanner.stop().then(() => {
                 console.log("Scanner parado.");
-                document.getElementById('reader').style.display = 'none'; // Esconde a caixa do scanner
-            }).catch(err => {
-                console.warn("Falha ao parar o scanner.", err);
-            });
+                document.getElementById('reader').style.display = 'none';
+            }).catch(err => console.warn("Falha ao parar o scanner.", err));
         }
-
-        // Coloca o código lido no campo de input
         document.getElementById('codigoBarra').value = decodedText;
-        
-        // Oculta o teclado virtual (útil em celulares)
         document.getElementById('codigoBarra').blur(); 
         
-        // Chama a função de buscar o produto automaticamente
-        // (Assumindo que você tenha uma função global window.buscarProduto())
-        // Se a função 'buscarProduto' estiver definida dentro do onAuthStateChanged, 
-        // talvez você precise chamá-la diretamente sem o 'window.'
-        
-        // !! IMPORTANTE: Verifique se sua função 'buscarProduto' está definida como 'window.buscarProduto'
-        // Se 'buscarProduto' estiver definida mais abaixo, esta chamada pode falhar.
-        // Mova 'window.buscarProduto = function() { ... }' para o escopo principal do script.
-        
-        // Para garantir, vamos chamar a função que está no escopo global (se ela for definida assim)
-        if (window.buscarProduto) {
-            window.buscarProduto(); 
-        } else {
-            console.warn("Função buscarProduto() não encontrada no escopo global.");
-            // Se 'buscarProduto' SÓ existe dentro do onAuthStateChanged, 
-            // você teria que refatorar o código para que ela esteja acessível aqui.
-            // Por enquanto, apenas preenchemos o campo.
-        }
+        if (window.buscarProduto) window.buscarProduto(); 
     };
 
-    // Função que é chamada em caso de falha no scan (opcional)
-    const onScanFailure = (error) => {
-        // Não faz nada, apenas ignora (para não ficar logando o tempo todo)
-    };
+    const onScanFailure = (error) => { /* Ignora falhas */ };
 
-    // Esta é a função que o seu botão "onclick" está chamando
     window.escanearProduto = () => {
         const readerElement = document.getElementById('reader');
-        readerElement.style.display = 'block'; // Mostra a caixa do scanner
-
-        // Se o scanner não foi inicializado, crie um novo
+        readerElement.style.display = 'block'; 
         if (!html5QrCodeScanner) {
-            html5QrCodeScanner = new Html5QrcodeScanner(
-                "reader",  // ID do elemento <div> onde o scanner vai aparecer
-                config,    // Configurações (definidas acima)
-                false      // verbose (false para não poluir o console)
-            );
+            html5QrCodeScanner = new Html5QrcodeScanner("reader", config, false);
         }
-
-        // Inicia o scanner
-        // O .render() usa a câmera traseira ("environment") por padrão
         html5QrCodeScanner.render(onScanSuccess, onScanFailure);
     };
 
-    // ==========================================================
-    // FIM DO CÓDIGO DE CORREÇÃO DO SCANNER
-    // ==========================================================
+    // --- Função de Busca (API) ---
+    window.buscarProduto = async function() {
+        const barcode = document.getElementById('codigoBarra').value.trim();
+        const produtoInfoDiv = document.getElementById('produto-info');
+        const produtoNomeInput = document.getElementById('produto-nome');
+        const produtoImagem = document.getElementById('produto-imagem');
+        const precoInput = document.getElementById('preco-unitario');
+        
+        if (!barcode) return alert("Por favor, digite ou escaneie um código de barras.");
 
-    onAuthStateChanged(auth, (user) => {
+        console.log(`Buscando produto: ${barcode}`);
+        alert("Buscando informações do produto... 🔍"); 
+        produtoInfoDiv.style.display = 'none'; 
+        produtoNomeInput.value = '';
+        produtoImagem.src = '';
+        precoInput.value = '';
+        document.getElementById('quantidade-display').innerText = '1'; // Reseta quantidade
+
+        const url = `https://world.openfoodfacts.org/api/v2/product/${barcode}`;
+
+        try {
+            const response = await fetch(url);
+            const data = await response.json();
+
+            if (data.product) {
+                const product = data.product;
+                console.log("Produto encontrado:", product);
+                produtoNomeInput.value = product.product_name || 'Nome não encontrado';
+                produtoImagem.src = product.image_url || product.image_small_url || 'https://i.imgur.com/83k9y6R.png';
+                produtoInfoDiv.style.display = 'block';
+                precoInput.focus();
+            } else {
+                console.warn("Produto não encontrado na base de dados.");
+                alert("Produto não encontrado na base do Open Food Facts. 😕\n\nQue tal cadastrar manualmente?");
+                produtoImagem.src = 'https://i.imgur.com/83k9y6R.png'; 
+                produtoInfoDiv.style.display = 'block';
+                produtoNomeInput.focus();
+            }
+        } catch (error) {
+            console.error("Erro ao buscar na API:", error);
+            alert("Houve um erro de conexão ao buscar o produto. Verifique sua internet.");
+        }
+    };
+
+    // --- Função de Cadastro Manual ---
+    window.cadastrarProdutoManualmente = function() {
+        const produtoInfoDiv = document.getElementById('produto-info');
+        const produtoNomeInput = document.getElementById('produto-nome');
+        const produtoImagem = document.getElementById('produto-imagem');
+        const precoInput = document.getElementById('preco-unitario');
+        
+        document.getElementById('codigoBarra').value = '';
+        produtoNomeInput.value = '';
+        precoInput.value = '';
+        produtoImagem.src = 'https://i.imgur.com/83k9y6R.png'; 
+        document.getElementById('quantidade-display').innerText = '1';
+        produtoInfoDiv.style.display = 'block';
+        produtoNomeInput.focus();
+    };
+
+    // --- Funções do Card de Produto (Carrinho) ---
+    window.alterarQuantidade = function(mudanca) {
+        const display = document.getElementById('quantidade-display');
+        let quantidadeAtual = parseInt(display.innerText, 10);
+        quantidadeAtual += mudanca;
+        if (quantidadeAtual < 1) quantidadeAtual = 1;
+        display.innerText = quantidadeAtual;
+    };
+
+    window.adicionarAoCarrinho = function() {
+        const barcode = document.getElementById('codigoBarra').value.trim();
+        const nome = document.getElementById('produto-nome').value.trim();
+        const precoStr = document.getElementById('preco-unitario').value;
+        const quantidade = parseInt(document.getElementById('quantidade-display').innerText, 10);
+        const imagem = document.getElementById('produto-imagem').src;
+
+        if (!nome) return alert("Por favor, preencha o nome do produto.");
+        if (!precoStr || parseFloat(precoStr) <= 0) return alert("Por favor, preencha um preço válido.");
+        
+        const preco = parseFloat(precoStr);
+
+        if (window.adicionarAoCarrinhoLocal) {
+            window.adicionarAoCarrinhoLocal({
+                barcode: barcode || `manual_${Date.now()}`,
+                nome: nome,
+                preco: preco,
+                quantidade: quantidade,
+                imagem: imagem
+            });
+        }
+        
+        document.getElementById('produto-info').style.display = 'none';
+        document.getElementById('codigoBarra').value = '';
+        document.getElementById('produto-nome').value = '';
+        document.getElementById('preco-unitario').value = '';
+        document.getElementById('quantidade-display').innerText = '1';
+        document.getElementById('produto-imagem').src = '';
+        document.getElementById('codigoBarra').focus();
+    };
+
+    // --- Funções Wrapper (Chamadas pelo HTML para as funções internas) ---
+    window.verCarrinho = function() {
+        if (window.renderizarCarrinhoLocal) window.renderizarCarrinhoLocal();
+    };
+
+    window.removerItemDoCarrinho = function(index) {
+        if (window.removerDoCarrinhoLocal) window.removerDoCarrinhoLocal(index);
+    };
+
+    window.finalizarCompra = function() {
+        if (window.finalizarCompraLocal) window.finalizarCompraLocal();
+    };
+
+    window.verHistorico = function() {
+        if (window.verHistoricoLocal) {
+            window.verHistoricoLocal();
+            if (window.fecharMenu) window.fecharMenu();
+        }
+    };
+    
+    // Funções placeholder para Ações do Produto
+    window.editarProduto = function() { alert("Função 'Editar' em desenvolvimento."); }
+    window.reportarErro = function() { alert("Função 'Reportar' em desenvolvimento."); }
+
+
+    // ================================================
+    // LÓGICA PRINCIPAL DO APP (APÓS LOGIN)
+    // ================================================
+
+    onAuthStateChanged(auth, async (user) => {
       if (!user) {
         document.getElementById('loading').style.display = 'none';
         window.location.href = 'index.html';
         return;
       }
+      
+      const cartDocRef = doc(db, "carts", user.uid); 
+      let cart = []; 
+      try {
+          const docSnap = await getDoc(cartDocRef);
+          if (docSnap.exists()) {
+              cart = docSnap.data().items || []; 
+              console.log("Carrinho carregado do Firestore:", cart);
+          } else {
+              console.log("Nenhum carrinho salvo encontrado. Começando um novo.");
+          }
+      } catch (error) {
+          console.error("Erro ao carregar o carrinho:", error);
+      }
 
       document.getElementById('loading').style.display = 'none';
       document.querySelector('.container').style.visibility = 'visible';
 
-      let cart = [];
-      let barcodeAtual = null;
       let listaAtualId = null;
       let idioma = localStorage.getItem('scanlistMarketIdioma') || 'pt';
       const dicionario = { /* ... dicionario ... */ };
 
-      function mostrarView(viewId) {
-          document.getElementById('mainContent').style.display = 'none';
-          document.getElementById('historicoContainer').innerHTML = '';
-          document.getElementById('viewListas').style.display = 'none';
-          document.getElementById('carrinhoDetalhado').style.display = 'none';
-          document.getElementById('viewListaDetalhes').style.display = 'none';
-          if (document.getElementById(viewId)) {
-              document.getElementById(viewId).style.display = 'block';
+      // ================================================
+      // FUNÇÕES INTERNAS (QUE PRECISAM DE 'user' e 'cart')
+      // ================================================
+
+      // --- Funções do Carrinho (Lógica) ---
+
+      async function saveCartToFirebase() {
+          if (!user) return;
+          try {
+              await setDoc(cartDocRef, { items: cart });
+              console.log("Carrinho salvo no Firestore.");
+          } catch (error) {
+              console.error("Erro ao salvar o carrinho:", error);
           }
       }
 
+      function atualizarContadorCarrinho() {
+          const countElement = document.getElementById('cartCount');
+          let totalUnidades = cart.reduce((total, item) => total + item.quantidade, 0);
+          countElement.innerText = totalUnidades;
+          countElement.style.display = totalUnidades > 0 ? 'block' : 'none';
+      }
+      
+      atualizarContadorCarrinho(); // Chamada inicial
+
+      window.adicionarAoCarrinhoLocal = (novoItem) => {
+          const itemExistenteIndex = cart.findIndex(item => item.barcode === novoItem.barcode && item.nome === novoItem.nome);
+          if (itemExistenteIndex > -1) {
+              cart[itemExistenteIndex].quantidade += novoItem.quantidade;
+              cart[itemExistenteIndex].preco = novoItem.preco; 
+          } else {
+              cart.push(novoItem);
+          }
+          atualizarContadorCarrinho();
+          saveCartToFirebase();
+          alert(`${novoItem.quantidade}x ${novoItem.nome} adicionado(s) ao carrinho!`);
+      };
+
+      window.renderizarCarrinhoLocal = () => {
+          mostrarView('carrinhoDetalhado'); 
+          const carrinhoDiv = document.getElementById('carrinhoDetalhado');
+          const totalBar = document.getElementById('totalBar');
+          const finalizarBtn = document.getElementById('finalizarBtn');
+          carrinhoDiv.innerHTML = ''; 
+          
+          if (cart.length === 0) {
+              carrinhoDiv.innerHTML = '<p style="text-align: center;">Seu carrinho está vazio.</p>';
+              totalBar.style.display = 'none';
+              finalizarBtn.style.display = 'none';
+              return;
+          }
+
+          let totalCompra = 0;
+          cart.forEach((item, index) => {
+              const subtotal = item.preco * item.quantidade;
+              totalCompra += subtotal;
+              carrinhoDiv.innerHTML += `
+                  <div class="cart-item">
+                      <img src="${item.imagem}" alt="${item.nome}">
+                      <div>
+                          <strong>${item.nome}</strong><br>
+                          <span>${item.quantidade} x R$ ${item.preco.toFixed(2)} = R$ ${subtotal.toFixed(2)}</span>
+                      </div>
+                      <button onclick="removerItemDoCarrinho(${index})">🗑️</button>
+                  </div>`;
+          });
+          
+          totalBar.innerText = `Total: R$ ${totalCompra.toFixed(2)}`;
+          totalBar.style.display = 'block';
+          finalizarBtn.style.display = 'block';
+      };
+
+      window.removerDoCarrinhoLocal = (index) => {
+          if (confirm(`Tem certeza que deseja remover "${cart[index].nome}" do carrinho?`)) {
+              cart.splice(index, 1); 
+              atualizarContadorCarrinho(); 
+              window.renderizarCarrinhoLocal(); 
+              saveCartToFirebase(); 
+          }
+      };
+
+      // --- Funções de Finalizar e Histórico ---
+
+      window.finalizarCompraLocal = async () => {
+          if (cart.length === 0) return alert("Seu carrinho está vazio.");
+          if (!confirm("Tem certeza que deseja finalizar esta compra?")) return;
+
+          let totalCompra = cart.reduce((total, item) => total + (item.preco * item.quantidade), 0);
+          const compra = {
+              userId: user.uid,
+              data: serverTimestamp(),
+              itens: cart,
+              total: totalCompra
+          };
+
+          try {
+              await addDoc(collection(db, "historico"), compra);
+              cart.length = 0; // Esvazia o array 'cart'
+              await saveCartToFirebase(); 
+              atualizarContadorCarrinho(); 
+              window.renderizarCarrinhoLocal();
+              alert("Compra finalizada com sucesso e salva no seu histórico!");
+              mostrarView('mainContent');
+          } catch (error) {
+              console.error("Erro ao finalizar a compra: ", error);
+              alert("Ocorreu um erro ao salvar sua compra. Tente novamente.");
+          }
+      };
+
+      window.verHistoricoLocal = async () => {
+          mostrarView('historicoContainer');
+          const historicoDiv = document.getElementById('historicoContainer');
+          historicoDiv.innerHTML = '<p style="text-align: center;">Buscando seu histórico...</p>';
+
+          try {
+              const q = query(collection(db, "historico"), where("userId", "==", user.uid), orderBy("data", "desc"));
+              const querySnapshot = await getDocs(q);
+
+              if (querySnapshot.empty) {
+                  historicoDiv.innerHTML = '<p style="text-align: center;">Você ainda não tem nenhuma compra no seu histórico.</p>';
+                  return;
+              }
+
+              let html = '<h2 style="text-align: center;">Meu Histórico de Compras</h2>';
+              querySnapshot.forEach(doc => {
+                  const compra = doc.data();
+                  const dataCompra = compra.data ? compra.data.toDate().toLocaleDateString('pt-BR', {
+                      day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                  }) : 'Data indisponível';
+
+                  html += `<div class="historico-item">
+                      <p><strong>Data:</strong> ${dataCompra}</p>
+                      <p><strong>Total:</strong> R$ ${compra.total.toFixed(2)}</p>
+                      <p><strong>Itens (${compra.itens.length}):</strong></p>
+                      <ul style="padding-left: 20px;">`;
+                  compra.itens.forEach(item => {
+                      html += `<li>${item.quantidade}x ${item.nome} (R$ ${item.preco.toFixed(2)} cada)</li>`;
+                  });
+                  html += `</ul></div>`;
+              });
+              historicoDiv.innerHTML = html;
+          } catch (error) {
+              console.error("Erro ao buscar histórico: ", error);
+              historicoDiv.innerHTML = '<p style="text-align: center; color: red;">Erro ao carregar seu histórico.</p>';
+          }
+      };
+
+      // --- Funções do Menu (Hambúrguer) ---
+
+      window.abrirMenu = function() {
+          document.getElementById("mySideMenu").style.left = "0";
+          document.getElementById("overlay").style.width = "100%";
+      };
+
+      window.fecharMenu = function() {
+          document.getElementById("mySideMenu").style.left = "-250px";
+          document.getElementById("overlay").style.width = "0";
+      };
+
+      window.logout = function() {
+          if (confirm("Tem certeza que deseja sair?")) {
+              signOut(auth).catch(err => console.error("Erro no logout:", err));
+          }
+      };
+      
+      window.toggleAcessibilidade = function() {
+          alert("Função 'Acessibilidade' ainda em desenvolvimento!");
+          fecharMenu();
+      };
+      window.mudarIdioma = function() {
+          alert("Função 'Mudar Idioma' ainda em desenvolvimento!");
+          fecharMenu();
+      };
+
+      // --- Funções de "Minhas Listas" ---
+      
+      // Carrega as listas do usuário na 'viewListas'
+      async function carregarListasDoUsuario() {
+          const listasContainer = document.getElementById("listasContainer");
+          listasContainer.innerHTML = "<p>Carregando listas...</p>";
+          try {
+              const q = query(collection(db, "listas"), where("userId", "==", user.uid), orderBy("nome"));
+              const querySnapshot = await getDocs(q);
+              if (querySnapshot.empty) {
+                  listasContainer.innerHTML = "<p>Nenhuma lista criada.</p>";
+                  return;
+              }
+              let html = "";
+              querySnapshot.forEach((doc) => {
+                  const lista = doc.data();
+                  // Adicionei um 'onclick' para abrir a lista
+                  html += `<div class="lista-item" onclick="abrirLista('${doc.id}', '${lista.nome}')" style="cursor: pointer; justify-content: space-between;">
+                              <span>${lista.nome}</span>
+                              <button class="remover-item-btn" onclick="event.stopPropagation(); deletarLista('${doc.id}')">🗑️</button>
+                           </div>`;
+              });
+              listasContainer.innerHTML = html;
+          } catch (error) {
+              console.error("Erro ao carregar listas: ", error);
+              listasContainer.innerHTML = "<p>Erro ao carregar listas.</p>";
+          }
+      }
+      
+      window.deletarLista = async function(idDaLista) {
+          if(confirm("Tem certeza que quer apagar esta lista e todos os seus itens?")) {
+              try {
+                  // Você precisaria deletar os sub-itens primeiro, mas por simplicidade vamos deletar só o doc da lista
+                  await deleteDoc(doc(db, "listas", idDaLista));
+                  await carregarListasDoUsuario(); // Recarrega
+              } catch (e) { console.error("Erro ao deletar lista: ", e); }
+          }
+      }
+
+      window.mostrarViewListas = function() {
+          mostrarView('viewListas');
+          carregarListasDoUsuario();
+          fecharMenu();
+      };
+      
+      window.criarNovaLista = async function() {
+          const nome = prompt("Qual o nome da nova lista?");
+          if (nome && nome.trim() !== "") {
+              try {
+                  await addDoc(collection(db, "listas"), {
+                      userId: user.uid,
+                      nome: nome.trim()
+                  });
+                  await carregarListasDoUsuario(); // Recarrega a lista
+              } catch (e) { console.error("Erro ao criar lista: ", e); }
+          }
+      };
+      
       async function carregarItensDaLista(idDaLista) {
           const itensContainer = document.getElementById("itensDaListaContainer");
           itensContainer.innerHTML = "<p>Carregando itens...</p>";
@@ -266,10 +591,6 @@
               itensContainer.innerHTML = "<p>Erro ao carregar itens da lista.</p>";
           }
       }
-      
-      // --- IMPORTANTE: Expondo funções para o HTML ---
-      // Como seu script é 'type=module', funções chamadas por 'onclick'
-      // precisam ser anexadas ao 'window'.
 
       window.abrirLista = function(idDaLista, nomeDaLista) {
           listaAtualId = idDaLista;
@@ -322,62 +643,44 @@
           }
       };
 
-      // Expondo outras funções que seu HTML chama via 'onclick'
-      window.logout = function() {
-          signOut(auth).catch(err => console.error("Erro no logout:", err));
-      };
+      // --- Função de Controle de View ---
       
-      window.mostrarViewListas = function() {
-          mostrarView('viewListas');
-          // Você precisa adicionar a função que carrega as listas aqui
-          // Ex: carregarListasDoUsuario(); 
-      };
-
-      window.criarNovaLista = function() {
-          const nome = prompt("Qual o nome da nova lista?");
-          if (nome) {
-              // Adicione a lógica para criar a lista no Firebase aqui
-              console.log("Criar lista:", nome);
+      function mostrarView(viewId) {
+          // Esconde todas as views principais
+          document.getElementById('mainContent').style.display = 'none';
+          document.getElementById('viewListas').style.display = 'none';
+          document.getElementById('viewListaDetalhes').style.display = 'none';
+          document.getElementById('carrinhoDetalhado').style.display = 'none';
+          document.getElementById('historicoContainer').style.display = 'none';
+          
+          // Esconde os botões do carrinho
+          document.getElementById('totalBar').style.display = 'none';
+          document.getElementById('finalizarBtn').style.display = 'none';
+          
+          // Mostra a view solicitada
+          const viewToShow = document.getElementById(viewId);
+          if (viewToShow) {
+              viewToShow.style.display = 'block';
           }
-      };
-      
-      window.verCarrinho = function() {
-          mostrarView('carrinhoDetalhado');
-          // Adicione a lógica para renderizar o carrinho aqui
-      };
 
-      window.abrirMenu = function() {
-          document.getElementById("mySideMenu").style.left = "0";
-          document.getElementById("overlay").style.width = "100%";
-      };
-
-      window.fecharMenu = function() {
-          document.getElementById("mySideMenu").style.left = "-250px";
-          document.getElementById("overlay").style.width = "0";
-      };
+          // Caso especial: se for a view 'mainContent', esconde o 'produto-info'
+          if (viewId === 'mainContent') {
+              document.getElementById('produto-info').style.display = 'none';
+          }
+          
+          // Caso especial: se for o carrinho, a 'renderizarCarrinhoLocal' já
+          // vai mostrar o 'totalBar' e 'finalizarBtn' se necessário.
+          
+          // Mostra ou esconde o 'Apoie o projeto'
+          const supportDiv = document.getElementById('support');
+          if (viewId === 'mainContent' || viewId === 'carrinhoDetalhado') {
+              supportDiv.style.display = 'block';
+          } else {
+              supportDiv.style.display = 'none';
+          }
+      }
       
-      window.buscarProduto = async function() {
-          // Sua lógica de buscar produto aqui
-          console.log("Buscando produto...");
-          alert("Função 'buscarProduto' chamada!");
-      };
-      
-      // Adicione aqui as definições de 'window.' para TODAS as outras
-      // funções que seu HTML chama, como:
-      // window.cadastrarProdutoManual = function() { ... }
-      // window.alterarQuantidade = function(num) { ... }
-      // window.adicionarAoCarrinho = function() { ... }
-      // window.editarProduto = function() { ... }
-      // window.reportarErro = function() { ... }
-      // window.finalizarCompra = function() { ... }
-      // window.verHistorico = function() { ... }
-      // window.toggleAcessibilidade = function() { ... }
-      // window.mudarIdioma = function() { ... }
-      
-      
-      // --- Fim das funções expostas ---
-
-      
+      // Inicia na tela principal
       mostrarView('mainContent');
     });
   </script>
