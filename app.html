@@ -266,6 +266,7 @@
             });
         }
         
+        // Limpa os campos para nova busca
         document.getElementById('produto-info').style.display = 'none';
         document.getElementById('codigoBarra').value = '';
         document.getElementById('produto-nome').value = '';
@@ -316,6 +317,7 @@
       try {
           const docSnap = await getDoc(cartDocRef);
           if (docSnap.exists()) {
+              // *** CARREGA O CARRINHO SALVO DO FIREBASE (PERSISTÊNCIA) ***
               cart = docSnap.data().items || []; 
               console.log("Carrinho carregado do Firestore:", cart);
           } else {
@@ -341,6 +343,7 @@
       async function saveCartToFirebase() {
           if (!user) return;
           try {
+              // *** SALVA O ESTADO ATUAL DO CARRINHO NO FIREBASE ***
               await setDoc(cartDocRef, { items: cart });
               console.log("Carrinho salvo no Firestore.");
           } catch (error) {
@@ -428,13 +431,23 @@
           };
 
           try {
+              // 1. Salva a compra no histórico
               await addDoc(collection(db, "historico"), compra);
-              cart.length = 0; // Esvazia o array 'cart'
+              
+              // 2. Esvazia o array 'cart' (local)
+              cart.length = 0; 
+              
+              // 3. Salva o carrinho vazio no Firebase (limpa o estado persistente)
               await saveCartToFirebase(); 
+              
+              // 4. Atualiza a UI
               atualizarContadorCarrinho(); 
               window.renderizarCarrinhoLocal();
               alert("Compra finalizada com sucesso e salva no seu histórico!");
+              
+              // 5. *** RECOMEÇA O PROCESSO: VOLTA PARA A TELA PRINCIPAL E FOCA NO INPUT ***
               mostrarView('mainContent');
+              document.getElementById('codigoBarra').focus(); 
           } catch (error) {
               console.error("Erro ao finalizar a compra: ", error);
               alert("Ocorreu um erro ao salvar sua compra. Tente novamente.");
@@ -668,9 +681,6 @@
               document.getElementById('produto-info').style.display = 'none';
           }
           
-          // Caso especial: se for o carrinho, a 'renderizarCarrinhoLocal' já
-          // vai mostrar o 'totalBar' e 'finalizarBtn' se necessário.
-          
           // Mostra ou esconde o 'Apoie o projeto'
           const supportDiv = document.getElementById('support');
           if (viewId === 'mainContent' || viewId === 'carrinhoDetalhado') {
@@ -680,8 +690,9 @@
           }
       }
       
-      // Inicia na tela principal
+      // Inicia na tela principal e garante que o campo de código de barras receba o foco
       mostrarView('mainContent');
+      document.getElementById('codigoBarra').focus();
     });
   </script>
 </body>
