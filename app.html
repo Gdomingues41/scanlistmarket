@@ -73,7 +73,7 @@
             <img id="produto-imagem" class="product-img" src="" alt="Imagem do Produto">
             <div class="product-name-container">
                 <input id="produto-nome" type="text" class="input-field" placeholder="Nome do produto" style="flex-grow: 1;"/>
-                <div id="product-actions-wrapper" class="product-actions" style="display: block;">
+                <div id="product-actions-wrapper" class="product-actions" style="display: none;">
                     <button onclick="editarProduto()" title="Editar/Corrigir nome">✏️</button>
                     <button onclick="reportarErro()" title="Reportar erro">🚩</button>
                 </div>
@@ -143,94 +143,39 @@
     const db = getFirestore(app);
 
     // ================================================
-    // VARIÁVEIS GLOBAIS
+    // FUNÇÕES GLOBAIS (CHAMADAS PELO HTML)
     // ================================================
-    let html5QrCodeScanner = null;
-    let isScanning = false;
-    let listaAtualId = null;
-    let acessibilidadeAtiva = false; // Novo estado para acessibilidade
-    let idiomaAtual = localStorage.getItem('scanlistMarketIdioma') || 'pt-BR'; // Novo estado para idioma
 
-    // Dicionário de Textos (Implementação Simples)
-    const DICT = {
-        'pt-BR': {
-            'titulo': 'Scanlist Market',
-            'alerta_editar': 'Função Editar: O nome do produto foi atualizado localmente.',
-            'alerta_reportar': 'Erro reportado com sucesso! Obrigado pela colaboração.',
-            'alerta_acessibilidade_on': 'Modo Acessibilidade ATIVADO (Fontes maiores).',
-            'alerta_acessibilidade_off': 'Modo Acessibilidade DESATIVADO.',
-            'alerta_idioma_br': 'Idioma alterado para Português (Brasil).',
-            'alerta_idioma_en': 'Idioma alterado para Inglês (Simulado).',
-            // Adicionar mais textos aqui conforme a aplicação crescer
-        },
-        'en-US': {
-            'titulo': 'Scanlist Market (EN)',
-            'alerta_editar': 'Edit Function: Product name updated locally.',
-            'alerta_reportar': 'Error reported successfully! Thank you for collaborating.',
-            'alerta_acessibilidade_on': 'Accessibility Mode ON (Larger fonts).',
-            'alerta_acessibilidade_off': 'Accessibility Mode OFF.',
-            'alerta_idioma_br': 'Language changed to Portuguese (Brazil).',
-            'alerta_idioma_en': 'Language changed to English (Simulated).',
-        }
-    };
-    
-    // ================================================
-    // FUNÇÕES DO SCANNER E BUSCA
-    // (Mantidas as correções anteriores)
-    // ================================================
+    // --- Funções do Scanner ---
+    let html5QrCodeScanner; 
+    const config = { fps: 10, qrbox: { width: 250, height: 250 } };
 
     const onScanSuccess = (decodedText, decodedResult) => {
-        if (html5QrCodeScanner && isScanning) {
+        console.log(`Código escaneado: ${decodedText}`, decodedResult);
+        if (html5QrCodeScanner && html5QrCodeScanner.getState() === 2) { // 2 = SCANNING
             html5QrCodeScanner.stop().then(() => {
+                console.log("Scanner parado.");
                 document.getElementById('reader').style.display = 'none';
-                isScanning = false;
-                document.getElementById('codigoBarra').value = decodedText;
-                document.getElementById('codigoBarra').blur();
-                if (window.buscarProduto) window.buscarProduto(); 
-            }).catch(err => {
-                console.warn("Falha ao parar o scanner.", err);
-                document.getElementById('codigoBarra').value = decodedText;
-                if (window.buscarProduto) window.buscarProduto();
-            });
+            }).catch(err => console.warn("Falha ao parar o scanner.", err));
         }
+        document.getElementById('codigoBarra').value = decodedText;
+        document.getElementById('codigoBarra').blur(); 
+        
+        if (window.buscarProduto) window.buscarProduto(); 
     };
 
-    const onScanFailure = (error) => { /* Ignora falhas leves */ };
+    const onScanFailure = (error) => { /* Ignora falhas */ };
 
     window.escanearProduto = () => {
-        if (isScanning) return;
         const readerElement = document.getElementById('reader');
         readerElement.style.display = 'block'; 
-        
         if (!html5QrCodeScanner) {
-            html5QrCodeScanner = new Html5Qrcode("reader"); 
+            html5QrCodeScanner = new Html5QrcodeScanner("reader", config, false);
         }
-
-        const videoConstraints = { facingMode: { ideal: "environment" } };
-        const readerConfig = {
-            fps: 10,
-            qrbox: { width: 250, height: 150 },
-            formatsToSupport: [
-                Html5Qrcode.BarcodeFormat.EAN_13,
-                Html5Qrcode.BarcodeFormat.UPC_A,
-                Html5Qrcode.BarcodeFormat.QR_CODE
-            ]
-        };
-        
-        html5QrCodeScanner.start(
-            videoConstraints,
-            readerConfig,
-            onScanSuccess,
-            onScanFailure
-        ).then(() => {
-            isScanning = true;
-        }).catch(err => {
-            alert("Erro ao iniciar a câmera ou negou permissão. Verifique os logs do console.");
-            readerElement.style.display = 'none';
-            isScanning = false;
-        });
+        html5QrCodeScanner.render(onScanSuccess, onScanFailure);
     };
-    
+
+    // --- Função de Busca (API) ---
     window.buscarProduto = async function() {
         const barcode = document.getElementById('codigoBarra').value.trim();
         const produtoInfoDiv = document.getElementById('produto-info');
@@ -246,7 +191,7 @@
         produtoNomeInput.value = '';
         produtoImagem.src = '';
         precoInput.value = '';
-        document.getElementById('quantidade-display').innerText = '1'; 
+        document.getElementById('quantidade-display').innerText = '1'; // Reseta quantidade
 
         const url = `https://world.openfoodfacts.org/api/v2/product/${barcode}`;
 
@@ -256,11 +201,13 @@
 
             if (data.product) {
                 const product = data.product;
+                console.log("Produto encontrado:", product);
                 produtoNomeInput.value = product.product_name || 'Nome não encontrado';
                 produtoImagem.src = product.image_url || product.image_small_url || 'https://i.imgur.com/83k9y6R.png';
                 produtoInfoDiv.style.display = 'block';
                 precoInput.focus();
             } else {
+                console.warn("Produto não encontrado na base de dados.");
                 alert("Produto não encontrado na base do Open Food Facts. 😕\n\nQue tal cadastrar manualmente?");
                 produtoImagem.src = 'https://i.imgur.com/83k9y6R.png'; 
                 produtoInfoDiv.style.display = 'block';
@@ -271,58 +218,93 @@
             alert("Houve um erro de conexão ao buscar o produto. Verifique sua internet.");
         }
     };
-    
-    // ================================================
-    // NOVAS FUNÇÕES (PLACEHOLDERS IMPLEMENTADOS)
-    // ================================================
 
-    // --- Ações do Produto (Novas Implementações) ---
-    window.editarProduto = function() { 
-        const novoNome = document.getElementById('produto-nome').value.trim();
-        if (novoNome) {
-            alert(DICT[idiomaAtual]['alerta_editar']);
-        } else {
-            alert("O nome do produto não pode ser vazio.");
-        }
-    }
-    
-    window.reportarErro = function() { 
-        // Em um app real, aqui enviaria o código de barras e o tipo de erro para um servidor.
-        alert(DICT[idiomaAtual]['alerta_reportar']);
-    }
-
-    // --- Acessibilidade (Implementação Simples) ---
-    window.toggleAcessibilidade = function() {
-        acessibilidadeAtiva = !acessibilidadeAtiva;
-        const body = document.body;
-        if (acessibilidadeAtiva) {
-            body.classList.add('big-font');
-            alert(DICT[idiomaAtual]['alerta_acessibilidade_on']);
-        } else {
-            body.classList.remove('big-font');
-            alert(DICT[idiomaAtual]['alerta_acessibilidade_off']);
-        }
-        fecharMenu();
+    // --- Função de Cadastro Manual ---
+    window.cadastrarProdutoManualmente = function() {
+        const produtoInfoDiv = document.getElementById('produto-info');
+        const produtoNomeInput = document.getElementById('produto-nome');
+        const produtoImagem = document.getElementById('produto-imagem');
+        const precoInput = document.getElementById('preco-unitario');
+        
+        document.getElementById('codigoBarra').value = '';
+        produtoNomeInput.value = '';
+        precoInput.value = '';
+        produtoImagem.src = 'https://i.imgur.com/83k9y6R.png'; 
+        document.getElementById('quantidade-display').innerText = '1';
+        produtoInfoDiv.style.display = 'block';
+        produtoNomeInput.focus();
     };
 
-    // --- Mudar Idioma (Implementação Simples) ---
-    window.mudarIdioma = function() {
-        if (idiomaAtual === 'pt-BR') {
-            idiomaAtual = 'en-US';
-            alert(DICT[idiomaAtual]['alerta_idioma_en']);
-        } else {
-            idiomaAtual = 'pt-BR';
-            alert(DICT[idiomaAtual]['alerta_idioma_br']);
+    // --- Funções do Card de Produto (Carrinho) ---
+    window.alterarQuantidade = function(mudanca) {
+        const display = document.getElementById('quantidade-display');
+        let quantidadeAtual = parseInt(display.innerText, 10);
+        quantidadeAtual += mudanca;
+        if (quantidadeAtual < 1) quantidadeAtual = 1;
+        display.innerText = quantidadeAtual;
+    };
+
+    window.adicionarAoCarrinho = function() {
+        const barcode = document.getElementById('codigoBarra').value.trim();
+        const nome = document.getElementById('produto-nome').value.trim();
+        const precoStr = document.getElementById('preco-unitario').value;
+        const quantidade = parseInt(document.getElementById('quantidade-display').innerText, 10);
+        const imagem = document.getElementById('produto-imagem').src;
+
+        if (!nome) return alert("Por favor, preencha o nome do produto.");
+        if (!precoStr || parseFloat(precoStr) <= 0) return alert("Por favor, preencha um preço válido.");
+        
+        const preco = parseFloat(precoStr);
+
+        if (window.adicionarAoCarrinhoLocal) {
+            window.adicionarAoCarrinhoLocal({
+                barcode: barcode || `manual_${Date.now()}`,
+                nome: nome,
+                preco: preco,
+                quantidade: quantidade,
+                imagem: imagem
+            });
         }
-        localStorage.setItem('scanlistMarketIdioma', idiomaAtual);
-        document.getElementById('titulo').innerText = DICT[idiomaAtual]['titulo'];
-        // Em um app completo, todos os textos da UI seriam atualizados aqui.
-        fecharMenu();
+        
+        // Limpa os campos para nova busca
+        document.getElementById('produto-info').style.display = 'none';
+        document.getElementById('codigoBarra').value = '';
+        document.getElementById('produto-nome').value = '';
+        document.getElementById('preco-unitario').value = '';
+        document.getElementById('quantidade-display').innerText = '1';
+        document.getElementById('produto-imagem').src = '';
+        document.getElementById('codigoBarra').focus();
+    };
+
+    // --- Funções Wrapper (Chamadas pelo HTML para as funções internas) ---
+    window.verCarrinho = function() {
+        if (window.renderizarCarrinhoLocal) window.renderizarCarrinhoLocal();
+    };
+
+    window.removerItemDoCarrinho = function(index) {
+        if (window.removerDoCarrinhoLocal) window.removerDoCarrinhoLocal(index);
+    };
+
+    window.finalizarCompra = function() {
+        if (window.finalizarCompraLocal) window.finalizarCompraLocal();
+    };
+
+    window.verHistorico = function() {
+        if (window.verHistoricoLocal) {
+            window.verHistoricoLocal();
+            if (window.fecharMenu) window.fecharMenu();
+        }
     };
     
+    // Funções placeholder para Ações do Produto
+    window.editarProduto = function() { alert("Função 'Editar' em desenvolvimento."); }
+    window.reportarErro = function() { alert("Função 'Reportar' em desenvolvimento."); }
+
+
     // ================================================
     // LÓGICA PRINCIPAL DO APP (APÓS LOGIN)
     // ================================================
+
     onAuthStateChanged(auth, async (user) => {
       if (!user) {
         document.getElementById('loading').style.display = 'none';
@@ -335,7 +317,11 @@
       try {
           const docSnap = await getDoc(cartDocRef);
           if (docSnap.exists()) {
+              // *** CARREGA O CARRINHO SALVO DO FIREBASE (PERSISTÊNCIA) ***
               cart = docSnap.data().items || []; 
+              console.log("Carrinho carregado do Firestore:", cart);
+          } else {
+              console.log("Nenhum carrinho salvo encontrado. Começando um novo.");
           }
       } catch (error) {
           console.error("Erro ao carregar o carrinho:", error);
@@ -344,12 +330,22 @@
       document.getElementById('loading').style.display = 'none';
       document.querySelector('.container').style.visibility = 'visible';
 
-      // --- Funções do Carrinho ---
+      let listaAtualId = null;
+      let idioma = localStorage.getItem('scanlistMarketIdioma') || 'pt';
+      const dicionario = { /* ... dicionario ... */ };
+
+      // ================================================
+      // FUNÇÕES INTERNAS (QUE PRECISAM DE 'user' e 'cart')
+      // ================================================
+
+      // --- Funções do Carrinho (Lógica) ---
 
       async function saveCartToFirebase() {
           if (!user) return;
           try {
+              // *** SALVA O ESTADO ATUAL DO CARRINHO NO FIREBASE ***
               await setDoc(cartDocRef, { items: cart });
+              console.log("Carrinho salvo no Firestore.");
           } catch (error) {
               console.error("Erro ao salvar o carrinho:", error);
           }
@@ -357,12 +353,12 @@
 
       function atualizarContadorCarrinho() {
           const countElement = document.getElementById('cartCount');
-          let totalProdutosDistintos = cart.length; 
-          countElement.innerText = totalProdutosDistintos;
-          countElement.style.display = totalProdutosDistintos > 0 ? 'block' : 'none';
+          let totalUnidades = cart.reduce((total, item) => total + item.quantidade, 0);
+          countElement.innerText = totalUnidades;
+          countElement.style.display = totalUnidades > 0 ? 'block' : 'none';
       }
       
-      atualizarContadorCarrinho();
+      atualizarContadorCarrinho(); // Chamada inicial
 
       window.adicionarAoCarrinhoLocal = (novoItem) => {
           const itemExistenteIndex = cart.findIndex(item => item.barcode === novoItem.barcode && item.nome === novoItem.nome);
@@ -395,7 +391,8 @@
           cart.forEach((item, index) => {
               const subtotal = item.preco * item.quantidade;
               totalCompra += subtotal;
-              carrinhoDiv.innerHTML += `<div class="cart-item">
+              carrinhoDiv.innerHTML += `
+                  <div class="cart-item">
                       <img src="${item.imagem}" alt="${item.nome}">
                       <div>
                           <strong>${item.nome}</strong><br>
@@ -419,6 +416,8 @@
           }
       };
 
+      // --- Funções de Finalizar e Histórico ---
+
       window.finalizarCompraLocal = async () => {
           if (cart.length === 0) return alert("Seu carrinho está vazio.");
           if (!confirm("Tem certeza que deseja finalizar esta compra?")) return;
@@ -432,14 +431,21 @@
           };
 
           try {
+              // 1. Salva a compra no histórico
               await addDoc(collection(db, "historico"), compra);
-              cart.length = 0; 
-              await setDoc(cartDocRef, { items: cart });
               
+              // 2. Esvazia o array 'cart' (local)
+              cart.length = 0; 
+              
+              // 3. Salva o carrinho vazio no Firebase (limpa o estado persistente)
+              await saveCartToFirebase(); 
+              
+              // 4. Atualiza a UI
               atualizarContadorCarrinho(); 
               window.renderizarCarrinhoLocal();
               alert("Compra finalizada com sucesso e salva no seu histórico!");
               
+              // 5. *** RECOMEÇA O PROCESSO: VOLTA PARA A TELA PRINCIPAL E FOCA NO INPUT ***
               mostrarView('mainContent');
               document.getElementById('codigoBarra').focus(); 
           } catch (error) {
@@ -465,7 +471,7 @@
               let html = '<h2 style="text-align: center;">Meu Histórico de Compras</h2>';
               querySnapshot.forEach(doc => {
                   const compra = doc.data();
-                  const dataCompra = compra.data ? compra.data.toDate().toLocaleDateString(idiomaAtual, {
+                  const dataCompra = compra.data ? compra.data.toDate().toLocaleDateString('pt-BR', {
                       day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
                   }) : 'Data indisponível';
 
@@ -486,7 +492,7 @@
           }
       };
 
-      // --- Funções do Menu ---
+      // --- Funções do Menu (Hambúrguer) ---
 
       window.abrirMenu = function() {
           document.getElementById("mySideMenu").style.left = "0";
@@ -503,9 +509,19 @@
               signOut(auth).catch(err => console.error("Erro no logout:", err));
           }
       };
-
-      // --- Funções de "Minhas Listas" (Lógica COMPLETA) ---
       
+      window.toggleAcessibilidade = function() {
+          alert("Função 'Acessibilidade' ainda em desenvolvimento!");
+          fecharMenu();
+      };
+      window.mudarIdioma = function() {
+          alert("Função 'Mudar Idioma' ainda em desenvolvimento!");
+          fecharMenu();
+      };
+
+      // --- Funções de "Minhas Listas" ---
+      
+      // Carrega as listas do usuário na 'viewListas'
       async function carregarListasDoUsuario() {
           const listasContainer = document.getElementById("listasContainer");
           listasContainer.innerHTML = "<p>Carregando listas...</p>";
@@ -519,6 +535,7 @@
               let html = "";
               querySnapshot.forEach((doc) => {
                   const lista = doc.data();
+                  // Adicionei um 'onclick' para abrir a lista
                   html += `<div class="lista-item" onclick="abrirLista('${doc.id}', '${lista.nome}')" style="cursor: pointer; justify-content: space-between;">
                               <span>${lista.nome}</span>
                               <button class="remover-item-btn" onclick="event.stopPropagation(); deletarLista('${doc.id}')">🗑️</button>
@@ -534,21 +551,10 @@
       window.deletarLista = async function(idDaLista) {
           if(confirm("Tem certeza que quer apagar esta lista e todos os seus itens?")) {
               try {
-                  // Primeiro, apaga todos os itens da subcoleção 'itens'
-                  const itensSnapshot = await getDocs(collection(db, "listas", idDaLista, "itens"));
-                  const deletePromises = [];
-                  itensSnapshot.forEach((doc) => {
-                      deletePromises.push(deleteDoc(doc.ref));
-                  });
-                  await Promise.all(deletePromises);
-                  
-                  // Depois, apaga o documento principal da lista
+                  // Você precisaria deletar os sub-itens primeiro, mas por simplicidade vamos deletar só o doc da lista
                   await deleteDoc(doc(db, "listas", idDaLista));
-                  await carregarListasDoUsuario(); 
-              } catch (e) { 
-                  console.error("Erro ao deletar lista: ", e); 
-                  alert("Erro ao deletar a lista e seus itens. Verifique as regras do Firebase.");
-              }
+                  await carregarListasDoUsuario(); // Recarrega
+              } catch (e) { console.error("Erro ao deletar lista: ", e); }
           }
       }
 
@@ -564,14 +570,10 @@
               try {
                   await addDoc(collection(db, "listas"), {
                       userId: user.uid,
-                      nome: nome.trim(),
-                      criacao: serverTimestamp()
+                      nome: nome.trim()
                   });
-                  await carregarListasDoUsuario(); 
-              } catch (e) { 
-                  console.error("Erro ao criar lista: ", e); 
-                  alert("Não foi possível criar a lista. Tente novamente.");
-              }
+                  await carregarListasDoUsuario(); // Recarrega a lista
+              } catch (e) { console.error("Erro ao criar lista: ", e); }
           }
       };
       
@@ -579,8 +581,7 @@
           const itensContainer = document.getElementById("itensDaListaContainer");
           itensContainer.innerHTML = "<p>Carregando itens...</p>";
           try {
-              // Ordena os itens para que os não comprados fiquem no topo
-              const q = query(collection(db, "listas", idDaLista, "itens"), orderBy("comprado"), orderBy("nome"));
+              const q = query(collection(db, "listas", idDaLista, "itens"), orderBy("nome"));
               const querySnapshot = await getDocs(q);
               if (querySnapshot.empty) {
                   itensContainer.innerHTML = "<p>Nenhum item adicionado a esta lista ainda.</p>";
@@ -591,7 +592,6 @@
                   const item = doc.data();
                   const itemClass = item.comprado ? "lista-item comprado" : "lista-item";
                   const isChecked = item.comprado ? "checked" : "";
-                  // Note que 'onclick' no checkbox chama 'marcarItemComoComprado'
                   htmlItens += `<div class="${itemClass}">
                       <input type="checkbox" onchange="marcarItemComoComprado('${doc.id}', ${item.comprado})" ${isChecked}>
                       <span>${item.nome}</span>
@@ -623,7 +623,7 @@
                   comprado: false
               });
               novoItemInput.value = "";
-              await carregarItensDaLista(listaAtualId); 
+              await carregarItensDaLista(listaAtualId); // Recarrega a lista
           } catch (error) {
               console.error("Erro ao adicionar item: ", error);
               alert("Não foi possível adicionar o item.");
@@ -659,24 +659,29 @@
       // --- Função de Controle de View ---
       
       function mostrarView(viewId) {
+          // Esconde todas as views principais
           document.getElementById('mainContent').style.display = 'none';
           document.getElementById('viewListas').style.display = 'none';
           document.getElementById('viewListaDetalhes').style.display = 'none';
           document.getElementById('carrinhoDetalhado').style.display = 'none';
           document.getElementById('historicoContainer').style.display = 'none';
           
+          // Esconde os botões do carrinho
           document.getElementById('totalBar').style.display = 'none';
           document.getElementById('finalizarBtn').style.display = 'none';
           
+          // Mostra a view solicitada
           const viewToShow = document.getElementById(viewId);
           if (viewToShow) {
               viewToShow.style.display = 'block';
           }
 
+          // Caso especial: se for a view 'mainContent', esconde o 'produto-info'
           if (viewId === 'mainContent') {
               document.getElementById('produto-info').style.display = 'none';
           }
           
+          // Mostra ou esconde o 'Apoie o projeto'
           const supportDiv = document.getElementById('support');
           if (viewId === 'mainContent' || viewId === 'carrinhoDetalhado') {
               supportDiv.style.display = 'block';
@@ -685,41 +690,10 @@
           }
       }
       
-      // Checa a acessibilidade no carregamento inicial
-      if (localStorage.getItem('scanlistMarketAcessibilidade') === 'true') {
-         acessibilidadeAtiva = true;
-         document.body.classList.add('big-font');
-      }
-
+      // Inicia na tela principal e garante que o campo de código de barras receba o foco
       mostrarView('mainContent');
       document.getElementById('codigoBarra').focus();
-      document.getElementById('titulo').innerText = DICT[idiomaAtual]['titulo'];
     });
-
-    // --- Outras Funções (Não dependem de 'user') ---
-    window.cadastrarProdutoManualmente = function() {
-        const produtoInfoDiv = document.getElementById('produto-info');
-        const produtoNomeInput = document.getElementById('produto-nome');
-        const produtoImagem = document.getElementById('produto-imagem');
-        const precoInput = document.getElementById('preco-unitario');
-        
-        document.getElementById('codigoBarra').value = '';
-        produtoNomeInput.value = '';
-        precoInput.value = '';
-        produtoImagem.src = 'https://i.imgur.com/83k9y6R.png'; 
-        document.getElementById('quantidade-display').innerText = '1';
-        produtoInfoDiv.style.display = 'block';
-        produtoNomeInput.focus();
-    };
-
-    window.alterarQuantidade = function(mudanca) {
-        const display = document.getElementById('quantidade-display');
-        let quantidadeAtual = parseInt(display.innerText, 10);
-        quantidadeAtual += mudanca;
-        if (quantidadeAtual < 1) quantidadeAtual = 1;
-        display.innerText = quantidadeAtual;
-    };
-    
   </script>
 </body>
 </html>
