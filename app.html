@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Scanlist Market</title>
-	  <script src="https://unpkg.com/html5-qrcode@2.3.8/dist/html5-qrcode.min.js" type="text/javascript"></script>
+
   <style>
 	    body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #fff; }
 	    .big-font * { font-size: 20px !important; }
@@ -127,6 +127,7 @@
   <script type="module">
 	    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
 	    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
+	    import { Html5Qrcode, Html5QrcodeSupportedFormats } from "https://unpkg.com/html5-qrcode@2.3.8/dist/html5-qrcode.min.js";
     import { getFirestore, doc, getDoc, setDoc, deleteDoc, updateDoc, collection, addDoc, serverTimestamp, query, where, getDocs, orderBy } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -158,15 +159,15 @@ let html5QrCodeScanner = null;
 	    
 	    // Adicionando o suporte para os formatos de código de barras mais comuns
 	    // A classe Html5QrcodeSupportedFormats é importada automaticamente pelo script na linha 7
-	    const formatsToSupport = [
-	        window.Html5QrcodeSupportedFormats.CODE_128,
-	        window.Html5QrcodeSupportedFormats.EAN_13,
-	        window.Html5QrcodeSupportedFormats.EAN_8,
-	        window.Html5QrcodeSupportedFormats.UPC_A,
-	        window.Html5QrcodeSupportedFormats.UPC_E,
-	        window.Html5QrcodeSupportedFormats.ITF,
-	        window.Html5QrcodeSupportedFormats.QR_CODE // Mantendo QR Code por segurança
-	    ];
+		    const formatsToSupport = [
+		        Html5QrcodeSupportedFormats.CODE_128,
+		        Html5QrcodeSupportedFormats.EAN_13,
+		        Html5QrcodeSupportedFormats.EAN_8,
+		        Html5QrcodeSupportedFormats.UPC_A,
+		        Html5QrcodeSupportedFormats.UPC_E,
+		        Html5QrcodeSupportedFormats.ITF,
+		        Html5QrcodeSupportedFormats.QR_CODE // Mantendo QR Code por segurança
+		    ];
 
     const onScanSuccess = (decodedText, decodedResult) => {
         console.log(`Código escaneado: ${decodedText}`, decodedResult);
@@ -194,13 +195,13 @@ let html5QrCodeScanner = null;
 	        const readerElement = document.getElementById('reader');
 	        readerElement.style.display = 'block'; 
 	        
-	        if (!html5QrCodeScanner) {
-	            html5QrCodeScanner = new window.Html5Qrcode("reader");
-	        }
+		        if (!html5QrCodeScanner) {
+			            html5QrCodeScanner = new Html5Qrcode("reader");
+			        }
 	        
 	        try {
 	            // 1. Listar câmeras
-	            const cameras = await window.Html5Qrcode.getCameras();
+			            const cameras = await Html5Qrcode.getCameras();
 	            if (cameras.length === 0) {
 	                alert("Nenhuma câmera encontrada no dispositivo.");
 	                readerElement.style.display = 'none';
