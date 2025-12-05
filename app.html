@@ -4,9 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Scanlist Market</title>
-  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+	  <script src="https://unpkg.com/html5-qrcode@2.3.8/dist/html5-qrcode.min.js" type="text/javascript"></script>
   <style>
-    body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #fff; }
+	    body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #fff; }
+	    .big-font * { font-size: 20px !important; }
     .header { background-color: #d40000; padding: 15px; text-align: center; color: white; position: relative; display: flex; align-items: center; justify-content: space-between; }
     .header h1 { font-size: 24px; margin: 0; }
     .cart-icon { font-size: 24px; color: white; cursor: pointer; position: relative; }
@@ -124,8 +125,8 @@
   </div>
 
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
-    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
+	    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
+	    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
     import { getFirestore, doc, getDoc, setDoc, deleteDoc, updateDoc, collection, addDoc, serverTimestamp, query, where, getDocs, orderBy } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -147,33 +148,102 @@
     // ================================================
 
     // --- Funções do Scanner ---
-    let html5QrCodeScanner; 
-    const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+let html5QrCodeScanner = null; 
+	    const config = { 
+	        fps: 10, 
+	        qrbox: { width: 250, height: 250 },
+	        // Preferindo a câmera traseira (environment) para melhor compatibilidade em Android
+	        facingMode: "environment" 
+	    };
+	    
+	    // Adicionando o suporte para os formatos de código de barras mais comuns
+	    // A classe Html5QrcodeSupportedFormats é importada automaticamente pelo script na linha 7
+	    const formatsToSupport = [
+	        window.Html5QrcodeSupportedFormats.CODE_128,
+	        window.Html5QrcodeSupportedFormats.EAN_13,
+	        window.Html5QrcodeSupportedFormats.EAN_8,
+	        window.Html5QrcodeSupportedFormats.UPC_A,
+	        window.Html5QrcodeSupportedFormats.UPC_E,
+	        window.Html5QrcodeSupportedFormats.ITF,
+	        window.Html5QrcodeSupportedFormats.QR_CODE // Mantendo QR Code por segurança
+	    ];
 
     const onScanSuccess = (decodedText, decodedResult) => {
         console.log(`Código escaneado: ${decodedText}`, decodedResult);
-        if (html5QrCodeScanner && html5QrCodeScanner.getState() === 2) { // 2 = SCANNING
-            html5QrCodeScanner.stop().then(() => {
-                console.log("Scanner parado.");
-                document.getElementById('reader').style.display = 'none';
-            }).catch(err => console.warn("Falha ao parar o scanner.", err));
-        }
+	        if (html5QrCodeScanner && html5QrCodeScanner.isScanning) { 
+	            html5QrCodeScanner.stop().then(() => {
+	                console.log("Scanner parado.");
+	                document.getElementById('reader').style.display = 'none';
+	            }).catch(err => console.warn("Falha ao parar o scanner.", err));
+	        }
         document.getElementById('codigoBarra').value = decodedText;
         document.getElementById('codigoBarra').blur(); 
         
-        if (window.buscarProduto) window.buscarProduto(); 
-    };
-
-    const onScanFailure = (error) => { /* Ignora falhas */ };
-
-    window.escanearProduto = () => {
-        const readerElement = document.getElementById('reader');
-        readerElement.style.display = 'block'; 
-        if (!html5QrCodeScanner) {
-            html5QrCodeScanner = new Html5QrcodeScanner("reader", config, false);
-        }
-        html5QrCodeScanner.render(onScanSuccess, onScanFailure);
-    };
+ 	        if (window.buscarProduto) window.buscarProduto(); 
+	        window.pararScanner(); // Garante que o scanner pare após o sucesso
+	    };
+	
+	    const onScanFailure = (error) => { /* Ignora falhas */ };
+	
+	    // A função escanearProduto foi movida e modificada para usar Html5Qrcode diretamente
+	    // e selecionar a câmera traseira.
+	    
+	    // A função pararScanner foi criada para ser chamada após o sucesso.
+	    
+		    window.escanearProduto = async () => {
+	        const readerElement = document.getElementById('reader');
+	        readerElement.style.display = 'block'; 
+	        
+	        if (!html5QrCodeScanner) {
+	            html5QrCodeScanner = new window.Html5Qrcode("reader");
+	        }
+	        
+	        try {
+	            // 1. Listar câmeras
+	            const cameras = await window.Html5Qrcode.getCameras();
+	            if (cameras.length === 0) {
+	                alert("Nenhuma câmera encontrada no dispositivo.");
+	                readerElement.style.display = 'none';
+	                return;
+	            }
+	            
+	            // 2. Tentar encontrar a câmera traseira (environment)
+	            let cameraId = cameras[0].id; // Padrão para a primeira câmera
+	            const backCamera = cameras.find(camera => camera.label.toLowerCase().includes('back') || camera.label.toLowerCase().includes('environment'));
+	            
+	            if (backCamera) {
+	                cameraId = backCamera.id;
+	                console.log("Câmera traseira selecionada:", backCamera.label);
+	            } else {
+	                console.log("Câmera traseira não identificada explicitamente. Usando a primeira câmera.");
+	            }
+	
+	            // 3. Iniciar o scanner com a câmera selecionada e formatos de código de barras
+	            await html5QrCodeScanner.start(
+	                cameraId, 
+	                { ...config, formatsToSupport: formatsToSupport, disableFlip: false }, // disableFlip: false é importante para Android
+	                onScanSuccess, 
+	                onScanFailure
+	            );
+	            console.log("Scanner iniciado com sucesso.");
+	            document.getElementById('btnPararScanner').style.display = 'block'; // Mostra o botão de parar
+	        } catch (err) {
+	            console.error("Erro ao iniciar o scanner:", err);
+	            alert("Erro ao iniciar a câmera. Verifique as permissões e tente novamente. Detalhes: " + err.message);
+	            readerElement.style.display = 'none';
+	            document.getElementById('btnPararScanner').style.display = 'none'; // Esconde o botão de parar em caso de erro
+	        }
+	    };
+	    
+			    window.pararScanner = () => {
+			        if (html5QrCodeScanner && html5QrCodeScanner.isScanning()) {
+			            html5QrCodeScanner.stop().then(() => {
+			                console.log("Scanner parado.");
+			                document.getElementById('reader').style.display = 'none';
+			                document.getElementById('btnPararScanner').style.display = 'none'; // Esconde o botão de parar
+			            }).catch(err => console.warn("Falha ao parar o scanner.", err));
+			        }
+			    };
 
     // --- Função de Busca (API) ---
     window.buscarProduto = async function() {
@@ -301,11 +371,16 @@
     window.reportarErro = function() { alert("Função 'Reportar' em desenvolvimento."); }
 
 
-    // ================================================
-    // LÓGICA PRINCIPAL DO APP (APÓS LOGIN)
-    // ================================================
-
-    onAuthStateChanged(auth, async (user) => {
+	      // ================================================
+	      // LÓGICA PRINCIPAL DO APP (APÓS LOGIN)
+	      // ================================================
+	
+	      // Carrega o estado de acessibilidade
+	      if (localStorage.getItem('acessibilidadeBigFont') === 'true') {
+	          document.body.classList.add('big-font');
+	      }
+	
+	      onAuthStateChanged(auth, async (user) => {
       if (!user) {
         document.getElementById('loading').style.display = 'none';
         window.location.href = 'index.html';
@@ -510,10 +585,13 @@
           }
       };
       
-      window.toggleAcessibilidade = function() {
-          alert("Função 'Acessibilidade' ainda em desenvolvimento!");
-          fecharMenu();
-      };
+	      window.toggleAcessibilidade = function() {
+	          document.body.classList.toggle('big-font');
+	          const isBigFont = document.body.classList.contains('big-font');
+	          localStorage.setItem('acessibilidadeBigFont', isBigFont);
+	          alert(`Modo Acessibilidade (Fonte Grande) ${isBigFont ? 'ativado' : 'desativado'}.`);
+	          fecharMenu();
+	      };
       window.mudarIdioma = function() {
           alert("Função 'Mudar Idioma' ainda em desenvolvimento!");
           fecharMenu();
