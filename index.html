@@ -2,110 +2,55 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
+  <title>Scanlist Market - Criar Conta</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Login - Scanlist Market</title>
+  <link rel="stylesheet" href="css/style.css"> 
   <style>
-    body {
-      background-color: #d40000;
-      font-family: Arial, sans-serif;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-      margin: 0;
-      padding: 20px;
-      box-sizing: border-box;
-    }
-    .login-card {
-      background-color: #ffffff;
-      padding: 40px 30px;
-      border-radius: 8px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-      width: 100%;
-      max-width: 400px;
-      text-align: center;
-    }
-    .logo {
-      width: 100px;
-      margin-bottom: 20px;
-    }
-    h1 {
-      color: #333;
-      margin-bottom: 30px;
-      font-size: 24px;
-    }
-    .input-group {
-      margin-bottom: 15px;
-      text-align: left;
-    }
-    input {
-      width: 100%;
-      padding: 12px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      font-size: 16px;
-      box-sizing: border-box;
-    }
-    .btn {
-      width: 100%;
-      padding: 12px;
-      margin-top: 10px;
-      border: none;
-      border-radius: 4px;
-      font-size: 16px;
-      font-weight: bold;
-      cursor: pointer;
-      transition: background-color 0.3s;
-    }
-    .btn-primary {
-      background-color: #d40000;
-      color: #fff;
-    }
-    .btn-primary:hover {
-      background-color: #a80000;
-    }
-    .toggle-link {
-      color: #d40000;
-      cursor: pointer;
-      text-decoration: underline;
-      margin-top: 20px;
-      display: inline-block;
-      font-size: 14px;
-    }
-    .campo-cadastro {
-      display: none;
-    }
+    /* Estilos rápidos caso o CSS externo não carregue */
+    .login-body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #d40000; margin: 0; }
+    .login-card { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); width: 90%; max-width: 400px; text-align: center; }
+    .login-logo { width: 150px; margin-bottom: 20px; }
+    input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+    button { width: 100%; padding: 12px; background-color: #d40000; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: bold; }
+    button:hover { background-color: #b30000; }
+    .switch { margin-top: 15px; font-size: 14px; }
+    .password-field { position: relative; }
+    .password-field span { position: absolute; right: 10px; top: 18px; cursor: pointer; }
   </style>
 </head>
-<body>
-  <div class="login-card">
-    <img src="https://i.imgur.com/dHOSups.png" alt="Scanlist Market Logo" class="logo">
-    <h1 id="form-title">Login</h1>
 
-    <div id="form-container">
-        <div class="input-group campo-cadastro">
-            <input type="text" id="nome" placeholder="Nome completo" required>
-        </div>
-        <div class="input-group">
-            <input type="email" id="email" placeholder="Email" required>
-        </div>
-        <div class="input-group">
-            <input type="password" id="senha" placeholder="Senha" required>
-        </div>
-        <div class="input-group campo-cadastro">
-            <input type="password" id="confirmarSenha" placeholder="Confirmar senha" required>
-        </div>
-        
-        <button id="main-button" class="btn btn-primary" onclick="loginEmail()">Entrar</button>
+<body class="login-body">
+
+  <div class="login-card">
+    <img src="logo-white.jpg" class="login-logo" alt="Scanlist Market">
+
+    <div class="message" id="msg" style="display:none; color:#2e7d32; margin-bottom:12px; font-weight:600;">
+      Conta criada com sucesso! Redirecionando...
     </div>
 
-    <p id="toggle-link" class="toggle-link" onclick="toggleForm()">Ainda não tem uma conta? Cadastre-se</p>
+    <input type="text" id="name" placeholder="Nome completo">
+    <input type="email" id="email" placeholder="Email">
+
+    <div class="password-field">
+      <input type="password" id="password" placeholder="Senha">
+      <span onclick="togglePassword()">👁️</span>
+    </div>
+
+    <input type="password" id="confirm" placeholder="Confirmar senha">
+
+    <button id="btnRegister">Criar acesso</button>
+
+    <div class="switch">
+      Já possui uma conta? <a href="login.html">Clique aqui</a>
+    </div>
   </div>
 
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
-    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
+    import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js";
+    import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-database.js";
 
+    // Configuração do teu projeto Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyCtke_2T3e0HDDMqJsfJsRGs5KcKtN3Xe8",
       authDomain: "scanlistmarket-30143.firebaseapp.com",
@@ -116,70 +61,61 @@
       appId: "1:428406265714:web:0a9d92dc1229458a3d6feb"
     };
 
+    // Inicializar Firebase
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
+    const db = getDatabase(app);
 
-    let isLoginView = true;
+    // Função de Registro
+    async function register() {
+      const name = document.getElementById("name").value;
+      const email = document.getElementById("email").value;
+      const pass = document.getElementById("password").value;
+      const confirm = document.getElementById("confirm").value;
 
-    window.toggleForm = () => {
-      isLoginView = !isLoginView;
-      const camposCadastro = document.querySelectorAll('.campo-cadastro');
-      const formTitle = document.getElementById('form-title');
-      const mainButton = document.getElementById('main-button');
-      const toggleLink = document.getElementById('toggle-link');
-
-      if (isLoginView) {
-        formTitle.innerText = "Login";
-        camposCadastro.forEach(el => el.style.display = 'none');
-        mainButton.innerText = "Entrar";
-        mainButton.setAttribute('onclick', 'loginEmail()');
-        toggleLink.innerText = "Ainda não tem uma conta? Cadastre-se";
-      } else {
-        formTitle.innerText = "Criar Conta";
-        camposCadastro.forEach(el => el.style.display = 'block');
-        mainButton.innerText = "Criar Conta";
-        mainButton.setAttribute('onclick', 'criarConta()');
-        toggleLink.innerText = "Já tem uma conta? Faça Login";
+      if (!name || !email || !pass || !confirm) {
+        alert("Preencha todos os campos");
+        return;
       }
-    };
 
-    window.loginEmail = () => {
-      const email = document.getElementById('email').value.trim();
-      const senha = document.getElementById('senha').value;
-      if (!email || !senha) return alert("Preencha email e senha.");
+      if (pass !== confirm) {
+        alert("As senhas não conferem");
+        return;
+      }
 
-      signInWithEmailAndPassword(auth, email, senha)
-        .then(() => { window.location.href = "app.html"; })
-        .catch(err => { alert("Erro ao logar: " + err.message); });
-    };
+      try {
+        // 1. Criar utilizador no Firebase Auth
+        const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
+        const user = userCredential.user;
 
-    window.criarConta = () => {
-      const nome = document.getElementById('nome').value.trim();
-      const email = document.getElementById('email').value.trim();
-      const senha = document.getElementById('senha').value;
-      const confirmarSenha = document.getElementById('confirmarSenha').value;
-
-      if (!nome || !email || !senha) return alert("Preencha todos os campos.");
-      if (senha !== confirmarSenha) return alert("As senhas não conferem.");
-      if (senha.length < 6) return alert("A senha precisa ter no mínimo 6 caracteres.");
-
-      createUserWithEmailAndPassword(auth, email, senha)
-        .then(userCredential => {
-          return updateProfile(userCredential.user, { displayName: nome });
-        })
-        .then(() => {
-          window.location.href = "app.html";
-        })
-        .catch(err => {
-          alert("Erro ao criar conta: " + err.message);
+        // 2. Salvar dados adicionais no Realtime Database usando o UID do utilizador
+        await set(ref(db, 'users/' + user.uid), {
+          username: name,
+          email: email,
+          createdAt: new Date().toISOString(),
+          totalCart: 0
         });
-    };
 
-    onAuthStateChanged(auth, (user) => {
-      if (user) {
-        window.location.href = "app.html";
+        // 3. Sucesso
+        document.getElementById("msg").style.display = "block";
+        setTimeout(() => {
+          window.location.href = "app.html";
+        }, 2000);
+
+      } catch (error) {
+        console.error(error);
+        alert("Erro ao cadastrar: " + error.message);
       }
-    });
+    }
+
+    // Tornar a função disponível para o botão e configurar o clique
+    document.getElementById("btnRegister").addEventListener("click", register);
+
+    // Função para mostrar/esconder senha
+    window.togglePassword = function() {
+      const pass = document.getElementById("password");
+      pass.type = pass.type === "password" ? "text" : "password";
+    };
   </script>
 </body>
 </html>
