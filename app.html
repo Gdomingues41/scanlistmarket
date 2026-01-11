@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Scanlist Market - Scanner</title>
+  <title>Scanlist Market - App</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="css/style.css">
   <script src="https://unpkg.com/html5-qrcode@2.3.8/dist/html5-qrcode.min.js"></script>
@@ -10,9 +10,9 @@
     body { font-family: sans-serif; margin: 0; background: #f4f4f4; }
     .header { background: #d40000; color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; }
     .container { padding: 20px; text-align: center; }
-    #reader { width: 100%; max-width: 400px; margin: 10px auto; border-radius: 8px; overflow: hidden; display: none; }
+    #reader { width: 100%; max-width: 400px; margin: 10px auto; border-radius: 8px; overflow: hidden; display: none; background: #000; }
     .product-card { background: white; padding: 20px; border-radius: 8px; margin-top: 20px; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-    .product-img { width: 120px; height: 120px; object-fit: contain; margin-bottom: 10px; }
+    .product-img { width: 120px; height: 120px; object-fit: contain; }
     input { width: 90%; padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; }
     .btn { background: #d40000; color: white; border: none; padding: 15px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; font-size: 16px; }
     .btn-save { background: #28a745; margin-top: 10px; }
@@ -24,32 +24,29 @@
   <header class="header">
     <div style="display: flex; flex-direction: column;">
       <small>Bem-vindo,</small>
-      <span id="userName" style="font-weight: bold;">Carregando...</span>
+      <span id="userNameDisplay" style="font-weight: bold;">Carregando...</span>
     </div>
     <div style="display: flex; gap: 20px; align-items: center;">
-      <span onclick="location.href='settings.html'" style="cursor:pointer; font-size: 22px;" title="Configurações">⚙️</span>
-      <div id="btnLogout" style="cursor:pointer; font-weight: bold; background: rgba(255,255,255,0.2); padding: 5px 10px; border-radius: 4px;">Sair</div>
+      <a href="settings.html" style="text-decoration: none; font-size: 22px;">⚙️</a>
+      <button id="btnSairManual" style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-weight: bold;">Sair</button>
     </div>
   </header>
 
   <main class="container">
     <div id="reader"></div>
-    <button class="btn" id="btnScan">📷 ESCANEAR PRODUTO</button>
+    <button class="btn" id="btnIniciarScan">📷 ESCANEAR PRODUTO</button>
 
     <div id="productCard" class="product-card">
-      <img id="pImg" src="" class="product-img" alt="Foto do produto">
-      <h3 id="pNome" style="margin: 5px 0;">Nome do Produto</h3>
-      <p id="pEan" style="font-size: 12px; color: #888;"></p>
-      
-      <input type="number" id="pPreco" placeholder="Preço na gôndola (R$)" step="0.01">
+      <img id="pImg" src="" class="product-img">
+      <h3 id="pNome">Buscando produto...</h3>
+      <input type="number" id="pPreco" placeholder="Preço (R$)" step="0.01">
       <input type="number" id="pQtd" value="1" min="1">
-      
-      <button class="btn btn-save" id="btnConfirmar">ADICIONAR AO CARRINHO</button>
-      <button class="btn" style="background:#666; margin-top:8px; font-size:12px;" onclick="document.getElementById('productCard').style.display='none'">Cancelar</button>
+      <button class="btn btn-save" id="btnSalvarNoBanco">ADICIONAR</button>
+      <button class="btn" style="background:#666; margin-top:8px;" id="btnCancelar">Cancelar</button>
     </div>
 
     <div class="total-box">
-      <h3 style="margin:0; color: #666; font-size: 14px; text-transform: uppercase;">Total Acumulado</h3>
+      <h3 style="margin:0; color: #666; font-size: 14px;">TOTAL ACUMULADO</h3>
       <p style="margin: 5px 0; font-size: 32px; font-weight: bold; color: #d40000;">R$ <span id="totalGeral">0.00</span></p>
     </div>
   </main>
@@ -57,7 +54,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js";
-    import { getDatabase, ref, get, set, onValue, update } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-database.js";
+    import { getDatabase, ref, get, onValue, update } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCtke_2T3e0HDDMqJsfJsRGs5KcKtN3Xe8",
@@ -73,20 +70,18 @@
     const auth = getAuth(app);
     const db = getDatabase(app);
     const html5QrCode = new Html5Qrcode("reader");
+    let userUID = null;
 
-    let uid = null;
-
-    // 1. Controle de Acesso e Dados em Tempo Real
+    // --- 1. VERIFICAÇÃO DE USUÁRIO E NOME ---
     onAuthStateChanged(auth, (user) => {
       if (user) {
-        uid = user.uid;
-        const userRef = ref(db, 'users/' + uid);
-        
-        // Escuta mudanças no nome ou no total automaticamente
-        onValue(userRef, (snapshot) => {
+        userUID = user.uid;
+        // Busca o nome e o total no banco de dados
+        onValue(ref(db, 'users/' + userUID), (snapshot) => {
           const data = snapshot.val();
           if (data) {
-            document.getElementById("userName").innerText = data.username || "Usuário";
+            // CORREÇÃO: Usando o ID correto para mostrar o nome
+            document.getElementById("userNameDisplay").innerText = data.username || "Usuário";
             document.getElementById("totalGeral").innerText = (data.totalCart || 0).toFixed(2);
           }
         });
@@ -95,76 +90,61 @@
       }
     });
 
-    // 2. Lógica do Scanner
-    document.getElementById("btnScan").addEventListener("click", () => {
-      const readerDiv = document.getElementById("reader");
-      readerDiv.style.display = "block";
-      
+    // --- 2. BOTÃO ESCANEAR (CORREÇÃO DE CLIQUE) ---
+    document.getElementById("btnIniciarScan").addEventListener("click", () => {
+      document.getElementById("reader").style.display = "block";
       html5QrCode.start(
         { facingMode: "environment" }, 
         { fps: 10, qrbox: { width: 250, height: 150 } },
         (decodedText) => {
           html5QrCode.stop();
-          readerDiv.style.display = "none";
-          buscarProduto(decodedText);
+          document.getElementById("reader").style.display = "none";
+          executarBuscaAPI(decodedText);
         }
-      ).catch(err => alert("Erro ao acessar câmera. Certifique-se de usar HTTPS."));
+      ).catch(err => alert("Erro na câmera: " + err));
     });
 
-    // 3. Busca na API OpenFoodFacts
-    async function buscarProduto(codigo) {
-      document.getElementById("pNome").innerText = "Buscando...";
+    // --- 3. BUSCA API ---
+    async function executarBuscaAPI(codigo) {
       document.getElementById("productCard").style.display = "block";
-      
       try {
         const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${codigo}`);
         const data = await res.json();
-        
         if (data.status === 1) {
-          document.getElementById("pNome").innerText = data.product.product_name || "Produto sem nome";
-          document.getElementById("pImg").src = data.product.image_url || "https://via.placeholder.com/100?text=Sem+Foto";
-          document.getElementById("pEan").innerText = "Código: " + codigo;
-          document.getElementById("pPreco").focus();
+          document.getElementById("pNome").innerText = data.product.product_name || "Sem nome";
+          document.getElementById("pImg").src = data.product.image_url || "";
         } else {
-          document.getElementById("pNome").innerText = "Produto não encontrado";
-          document.getElementById("pEan").innerText = "EAN: " + codigo;
-          alert("Este código não está no banco de dados. Digite o preço mesmo assim.");
+          document.getElementById("pNome").innerText = "Produto não cadastrado";
         }
-      } catch (e) {
-        alert("Erro na conexão com a base de produtos.");
-      }
+      } catch (e) { alert("Erro na busca."); }
     }
 
-    // 4. Salvar no Firebase
-    document.getElementById("btnConfirmar").addEventListener("click", async () => {
+    // --- 4. BOTÃO ADICIONAR ---
+    document.getElementById("btnSalvarNoBanco").addEventListener("click", async () => {
       const preco = parseFloat(document.getElementById("pPreco").value);
       const qtd = parseInt(document.getElementById("pQtd").value);
+      if (!preco) return alert("Digite o preço!");
 
-      if (!preco || preco <= 0) {
-        alert("Por favor, insira o preço do produto.");
-        return;
-      }
-
-      const userRef = ref(db, 'users/' + uid);
-      const snap = await get(userRef);
+      const snap = await get(ref(db, 'users/' + userUID));
       const totalAtual = snap.val().totalCart || 0;
-      const novoTotal = totalAtual + (preco * qtd);
-
-      try {
-        await update(ref(db, 'users/' + uid), { totalCart: novoTotal });
-        document.getElementById("productCard").style.display = "none";
-        document.getElementById("pPreco").value = "";
-        document.getElementById("pQtd").value = "1";
-        alert("Adicionado!");
-      } catch (e) {
-        alert("Erro ao salvar dados.");
-      }
+      
+      await update(ref(db, 'users/' + userUID), {
+        totalCart: totalAtual + (preco * qtd)
+      });
+      
+      document.getElementById("productCard").style.display = "none";
+      document.getElementById("pPreco").value = "";
     });
 
-    // 5. Logout
-    document.getElementById("btnLogout").addEventListener("click", () => {
+    // --- 5. BOTÃO CANCELAR E SAIR ---
+    document.getElementById("btnCancelar").addEventListener("click", () => {
+      document.getElementById("productCard").style.display = "none";
+    });
+
+    document.getElementById("btnSairManual").addEventListener("click", () => {
       signOut(auth).then(() => window.location.href = "login.html");
     });
+
   </script>
 </body>
 </html>
