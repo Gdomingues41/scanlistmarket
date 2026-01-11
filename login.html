@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Scanlist Market - Entrar</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    .login-body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #d40000; margin: 0; }
+    .login-card { background: white; padding: 30px; border-radius: 8px; width: 90%; max-width: 400px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+    input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+    button { width: 100%; padding: 12px; background-color: #d40000; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; }
+    .switch { margin-top: 15px; font-size: 14px; }
+    a { color: #d40000; text-decoration: none; font-weight: bold; }
+  </style>
+</head>
+<body class="login-body">
+  <div class="login-card">
+    <h2>Entrar</h2>
+    <input type="email" id="loginEmail" placeholder="Email">
+    <input type="password" id="loginPass" placeholder="Senha">
+    <button id="btnLogin">Entrar</button>
+    
+    <div class="switch">
+      Ainda não tem conta? <a href="index.html">Cadastre-se aqui</a>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCtke_2T3e0HDDMqJsfJsRGs5KcKtN3Xe8",
+      authDomain: "scanlistmarket-30143.firebaseapp.com",
+      databaseURL: "https://scanlistmarket-30143-default-rtdb.firebaseio.com",
+      projectId: "scanlistmarket-30143",
+      storageBucket: "scanlistmarket-30143.appspot.com",
+      messagingSenderId: "428406265714",
+      appId: "1:428406265714:web:0a9d92dc1229458a3d6feb"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    document.getElementById("btnLogin").addEventListener("click", async () => {
+      const email = document.getElementById("loginEmail").value;
+      const pass = document.getElementById("loginPass").value;
+
+      try {
+        await signInWithEmailAndPassword(auth, email, pass);
+        window.location.href = "app.html";
+      } catch (error) {
+        alert("Erro ao entrar: Verifique o email e a senha.");
+      }
+    });
+  </script>
+</body>
+</html>
