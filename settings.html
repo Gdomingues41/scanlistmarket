@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Scanlist Market - Configurações</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { font-family: sans-serif; margin: 0; background: #f4f4f4; color: #333; }
+    .header { background: #d40000; color: white; padding: 15px; display: flex; align-items: center; }
+    .header button { background: none; border: none; color: white; font-size: 20px; cursor: pointer; margin-right: 15px; }
+    .container { padding: 20px; max-width: 500px; margin: 0 auto; }
+    .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
+    h3 { margin-top: 0; color: #d40000; }
+    input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+    .btn { width: 100%; padding: 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 16px; margin-top: 10px; }
+    .btn-save { background: #28a745; color: white; }
+    .btn-danger { background: #fff; color: #d40000; border: 1px solid #d40000; }
+    .info-text { font-size: 14px; color: #666; margin-bottom: 5px; }
+  </style>
+</head>
+<body>
+
+  <header class="header">
+    <button onclick="location.href='app.html'">←</button>
+    <span>Configurações de Perfil</span>
+  </header>
+
+  <main class="container">
+    <div class="card">
+      <h3>Meus Dados</h3>
+      <p class="info-text">E-mail (não pode ser alterado):</p>
+      <input type="text" id="userEmail" disabled style="background: #eee;">
+      
+      <p class="info-text">Nome de Exibição:</p>
+      <input type="text" id="userNameInput" placeholder="Seu nome">
+      
+      <button class="btn btn-save" id="btnUpdateProfile">Salvar Alterações</button>
+    </div>
+
+    <div class="card">
+      <h3>Gerenciar Compras</h3>
+      <p class="info-text">Isso apagará o total acumulado do seu carrinho atual.</p>
+      <button class="btn btn-danger" id="btnClearHistory">Zerar Total do Carrinho</button>
+    </div>
+  </main>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js";
+    import { getDatabase, ref, get, update, set } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCtke_2T3e0HDDMqJsfJsRGs5KcKtN3Xe8",
+      authDomain: "scanlistmarket-30143.firebaseapp.com",
+      databaseURL: "https://scanlistmarket-30143-default-rtdb.firebaseio.com",
+      projectId: "scanlistmarket-30143",
+      storageBucket: "scanlistmarket-30143.appspot.com",
+      messagingSenderId: "428406265714",
+      appId: "1:428406265714:web:0a9d92dc1229458a3d6feb"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getDatabase(app);
+
+    let uid = null;
+
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        uid = user.uid;
+        document.getElementById("userEmail").value = user.email;
+        
+        // Carregar nome atual do banco
+        get(ref(db, 'users/' + uid)).then((snapshot) => {
+          if (snapshot.exists()) {
+            document.getElementById("userNameInput").value = snapshot.val().username || "";
+          }
+        });
+      } else {
+        window.location.href = "login.html";
+      }
+    });
+
+    // Atualizar Nome
+    document.getElementById("btnUpdateProfile").addEventListener("click", async () => {
+      const newName = document.getElementById("userNameInput").value;
+      if (!newName) return alert("Digite um nome!");
+
+      try {
+        await update(ref(db, 'users/' + uid), { username: newName });
+        alert("Perfil atualizado!");
+      } catch (e) { alert("Erro ao atualizar."); }
+    });
+
+    // Zerar Carrinho
+    document.getElementById("btnClearHistory").addEventListener("click", async () => {
+      if (confirm("Tem certeza que deseja zerar o total das suas compras?")) {
+        try {
+          await update(ref(db, 'users/' + uid), { totalCart: 0 });
+          alert("Carrinho zerado com sucesso!");
+        } catch (e) { alert("Erro ao limpar."); }
+      }
+    });
+  </script>
+</body>
+</html>
