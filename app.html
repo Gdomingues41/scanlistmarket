@@ -1,145 +1,128 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <title>Scanlist Market - Scanner</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="https://unpkg.com/html5-qrcode@2.3.8/dist/html5-qrcode.min.js"></script>
-    <style>
-        body { font-family: sans-serif; margin: 0; background: #f4f4f4; }
-        .header { background: #d40000; color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; }
-        .container { padding: 20px; text-align: center; }
-        #reader { width: 100%; max-width: 400px; margin: 10px auto; border-radius: 8px; overflow: hidden; display: none; background: #000; }
-        .product-card { background: white; padding: 20px; border-radius: 8px; margin-top: 20px; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        .product-img { width: 120px; height: 120px; object-fit: contain; }
-        input { width: 90%; padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; }
-        .btn { background: #d40000; color: white; border: none; padding: 15px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; font-size: 16px; }
-        .btn-save { background: #28a745; margin-top: 10px; }
-        .total-box { margin-top: 30px; background: white; padding: 20px; border-radius: 8px; border-left: 5px solid #d40000; }
-    </style>
+  <meta charset="UTF-8">
+  <title>Scanlist Market - App</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <style>
+    body { font-family: sans-serif; margin: 0; background: #f4f4f4; }
+    .header { background: #d40000; color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; }
+    .container { padding: 20px; text-align: center; }
+    /* Área onde a câmera aparece */
+    #reader { width: 100%; max-width: 400px; margin: 10px auto; border-radius: 8px; overflow: hidden; display: none; background: #000; }
+    .product-card { background: white; padding: 20px; border-radius: 8px; margin-top: 20px; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    .btn { background: #d40000; color: white; border: none; padding: 15px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; font-size: 16px; }
+    .total-box { margin-top: 30px; background: white; padding: 20px; border-radius: 8px; border-left: 5px solid #d40000; }
+  </style>
 </head>
 <body>
 
-<header class="header">
-    <div style="display: flex; flex-direction: column;">
-        <small>Bem-vindo,</small>
-        <span id="userNameDisplay" style="font-weight: bold;">Carregando nome...</span>
+  <header class="header">
+    <div><small>Olá,</small> <span id="userNameDisplay" style="font-weight: bold;">...</span></div>
+    <div style="display: flex; gap: 15px;">
+      <a href="settings.html" style="text-decoration:none">⚙️</a>
+      <button id="btnSair" style="background:none; border:1px solid white; color:white; border-radius:4px; cursor:pointer;">Sair</button>
     </div>
-    <div style="display: flex; gap: 20px; align-items: center;">
-        <a href="settings.html" style="text-decoration: none; font-size: 22px;">⚙️</a>
-        <button id="btnSair" style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 5px 10px; border-radius: 4px; cursor: pointer;">Sair</button>
-    </div>
-</header>
+  </header>
 
-<main class="container">
+  <main class="container">
     <div id="reader"></div>
-    <button class="btn" id="btnAbrirScanner">📷 ESCANEAR PRODUTO</button>
+    <button class="btn" id="btnIniciarScan">📷 ESCANEAR PRODUTO</button>
 
     <div id="productCard" class="product-card">
-        <img id="pImg" src="" class="product-img">
-        <h3 id="pNome">Buscando...</h3>
-        <input type="number" id="pPreco" placeholder="Preço (R$)" step="0.01">
-        <input type="number" id="pQtd" value="1" min="1">
-        <button class="btn btn-save" id="btnAdicionar">ADICIONAR</button>
-        <button class="btn" style="background:#666; margin-top:8px;" id="btnFecharCard">Cancelar</button>
+      <h3 id="pNome">Buscando...</h3>
+      <input type="number" id="pPreco" placeholder="Preço (R$)" style="width:90%; padding:10px; margin:10px 0;">
+      <button class="btn" id="btnConfirmar" style="background:#28a745;">ADICIONAR</button>
     </div>
 
     <div class="total-box">
-        <h3 style="margin:0; color: #666; font-size: 14px;">TOTAL ACUMULADO</h3>
-        <p style="margin: 5px 0; font-size: 32px; font-weight: bold; color: #d40000;">R$ <span id="totalGeral">0.00</span></p>
+      <h3 style="margin:0; font-size: 14px;">TOTAL</h3>
+      <p style="font-size: 32px; font-weight: bold; color: #d40000; margin: 5px 0;">R$ <span id="totalGeral">0.00</span></p>
     </div>
-</main>
+  </main>
 
-<script type="module">
+  <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js";
-    import { getDatabase, ref, get, onValue, update } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-database.js";
+    import { getDatabase, ref, onValue, update, get } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-database.js";
 
     const firebaseConfig = {
-        apiKey: "AIzaSyCtke_2T3e0HDDMqJsfJsRGs5KcKtN3Xe8",
-        authDomain: "scanlistmarket-30143.firebaseapp.com",
-        databaseURL: "https://scanlistmarket-30143-default-rtdb.firebaseio.com",
-        projectId: "scanlistmarket-30143",
-        storageBucket: "scanlistmarket-30143.appspot.com",
-        messagingSenderId: "428406265714",
-        appId: "1:428406265714:web:0a9d92dc1229458a3d6feb"
+      apiKey: "AIzaSyCtke_2T3e0HDDMqJsfJsRGs5KcKtN3Xe8",
+      authDomain: "scanlistmarket-30143.firebaseapp.com",
+      databaseURL: "https://scanlistmarket-30143-default-rtdb.firebaseio.com",
+      projectId: "scanlistmarket-30143",
+      storageBucket: "scanlistmarket-30143.appspot.com",
+      messagingSenderId: "428406265714",
+      appId: "1:428406265714:web:0a9d92dc1229458a3d6feb"
     };
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getDatabase(app);
-    const html5QrCode = new Html5Qrcode("reader");
     let userUID = null;
 
-    // --- CARREGAR DADOS DO USUÁRIO ---
+    // --- CARREGAR DADOS ---
     onAuthStateChanged(auth, (user) => {
-        if (user) {
-            userUID = user.uid;
-            onValue(ref(db, 'users/' + userUID), (snapshot) => {
-                const data = snapshot.val();
-                if (data) {
-                    // Aqui está a correção do nome:
-                    document.getElementById("userNameDisplay").innerText = data.username || "Usuário";
-                    document.getElementById("totalGeral").innerText = (data.totalCart || 0).toFixed(2);
-                }
-            });
-        } else {
-            window.location.href = "login.html";
-        }
+      if (user) {
+        userUID = user.uid;
+        onValue(ref(db, 'users/' + userUID), (snapshot) => {
+          const data = snapshot.val();
+          if (data) {
+            document.getElementById("userNameDisplay").innerText = data.username || "Usuário";
+            document.getElementById("totalGeral").innerText = (data.totalCart || 0).toFixed(2);
+          }
+        });
+      } else {
+        window.location.href = "login.html";
+      }
     });
 
-    // --- BOTÃO ESCANEAR ---
-    document.getElementById("btnAbrirScanner").onclick = function() {
-        const readerDiv = document.getElementById("reader");
-        readerDiv.style.display = "block";
-        html5QrCode.start(
-            { facingMode: "environment" }, 
-            { fps: 10, qrbox: { width: 250, height: 150 } },
-            (decodedText) => {
-                html5QrCode.stop();
-                readerDiv.style.display = "none";
-                buscarProduto(decodedText);
-            }
-        ).catch(err => alert("Erro ao abrir câmera. Use HTTPS!"));
-    };
+    // --- LÓGICA DO SCANNER (CORRIGIDA) ---
+    const html5QrCode = new Html5Qrcode("reader");
 
-    // --- BUSCA NA API ---
-    async function buscarProduto(codigo) {
-        document.getElementById("productCard").style.display = "block";
-        document.getElementById("pNome").innerText = "Buscando...";
-        try {
-            const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${codigo}`);
-            const data = await res.json();
-            if (data.status === 1) {
-                document.getElementById("pNome").innerText = data.product.product_name || "Sem nome";
-                document.getElementById("pImg").src = data.product.image_url || "";
-            } else {
-                document.getElementById("pNome").innerText = "Produto não encontrado";
-            }
-        } catch (e) { alert("Erro na API."); }
+    document.getElementById("btnIniciarScan").addEventListener("click", () => {
+      const readerElement = document.getElementById("reader");
+      readerElement.style.display = "block";
+
+      // Configurações para a câmera traseira em dispositivos móveis
+      const config = { fps: 10, qrbox: { width: 250, height: 150 } };
+
+      html5QrCode.start(
+        { facingMode: "environment" }, 
+        config,
+        (decodedText) => {
+          html5QrCode.stop().then(() => {
+            readerElement.style.display = "none";
+            buscarAPI(decodedText);
+          });
+        },
+        (errorMessage) => { /* Ignora erros de procura de código */ }
+      ).catch((err) => {
+        console.error("Erro na câmera:", err);
+        alert("Erro: Certifique-se de que deu permissão para a câmera e que está a usar HTTPS.");
+      });
+    });
+
+    async function buscarAPI(codigo) {
+      document.getElementById("productCard").style.display = "block";
+      try {
+        const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${codigo}`);
+        const data = await res.json();
+        document.getElementById("pNome").innerText = (data.status === 1) ? data.product.product_name : "Produto Manual";
+      } catch (e) { document.getElementById("pNome").innerText = "Erro na busca"; }
     }
 
-    // --- BOTÃO ADICIONAR ---
-    document.getElementById("btnAdicionar").onclick = async function() {
-        const preco = parseFloat(document.getElementById("pPreco").value);
-        const qtd = parseInt(document.getElementById("pQtd").value);
-        if (!preco) return alert("Digite o preço!");
-
-        const snap = await get(ref(db, 'users/' + userUID));
-        const atual = snap.val().totalCart || 0;
-        
-        await update(ref(db, 'users/' + userUID), { totalCart: atual + (preco * qtd) });
-        document.getElementById("productCard").style.display = "none";
-        document.getElementById("pPreco").value = "";
+    document.getElementById("btnConfirmar").onclick = async () => {
+      const preco = parseFloat(document.getElementById("pPreco").value);
+      if (!preco) return alert("Digite o preço!");
+      const snap = await get(ref(db, 'users/' + userUID));
+      const atual = snap.val().totalCart || 0;
+      await update(ref(db, 'users/' + userUID), { totalCart: atual + preco });
+      document.getElementById("productCard").style.display = "none";
     };
 
-    // --- BOTÃO FECHAR E SAIR ---
-    document.getElementById("btnFecharCard").onclick = () => document.getElementById("productCard").style.display = "none";
-    
-    document.getElementById("btnSair").onclick = () => {
-        signOut(auth).then(() => window.location.href = "login.html");
-    };
-
-</script>
+    document.getElementById("btnSair").onclick = () => signOut(auth);
+  </script>
 </body>
 </html>
