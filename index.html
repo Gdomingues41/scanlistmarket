@@ -7,32 +7,22 @@
   <style>
     .login-body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #d40000; margin: 0; }
     .login-card { background: white; padding: 30px; border-radius: 12px; width: 90%; max-width: 400px; text-align: center; box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
-    .login-logo { width: 150px; margin-bottom: 20px; }
+    .login-logo { width: 180px; margin-bottom: 20px; }
     input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 16px; }
     button { width: 100%; padding: 14px; background-color: #d40000; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; margin-top: 10px; }
     .switch { margin-top: 20px; font-size: 14px; }
     a { color: #d40000; text-decoration: none; font-weight: bold; }
-    .message { display: none; color: #2e7d32; margin-bottom: 12px; font-weight: 600; }
   </style>
 </head>
-
 <body class="login-body">
-
   <div class="login-card">
     <img src="logo-white.jpg" class="login-logo" alt="Scanlist Market">
-
-    <div class="message" id="msg">Conta criada! Redirecionando...</div>
-
     <input type="text" id="name" placeholder="Nome completo">
     <input type="email" id="email" placeholder="Email">
     <input type="password" id="password" placeholder="Senha (mínimo 6 caracteres)">
     <input type="password" id="confirm" placeholder="Confirmar senha">
-
     <button id="btnCriarAcesso">Criar acesso</button>
-
-    <div class="switch">
-      Já possui uma conta? <a href="login.html">Clique aqui</a>
-    </div>
+    <div class="switch">Já possui uma conta? <a href="login.html">Clique aqui</a></div>
   </div>
 
   <script type="module">
@@ -54,46 +44,25 @@
     const auth = getAuth(app);
     const db = getDatabase(app);
 
-    // Conexão direta do botão com a função (Evita erro de escopo)
     document.getElementById("btnCriarAcesso").onclick = async function() {
       const name = document.getElementById("name").value;
       const email = document.getElementById("email").value;
       const pass = document.getElementById("password").value;
       const confirm = document.getElementById("confirm").value;
 
-      if (!name || !email || !pass || !confirm) {
-        alert("Preencha todos os campos!");
-        return;
-      }
-
-      if (pass !== confirm) {
-        alert("As senhas não conferem!");
-        return;
-      }
+      if (!name || !email || !pass || !confirm) return alert("Preencha todos os campos!");
+      if (pass !== confirm) return alert("As senhas não conferem!");
 
       try {
-        // 1. Cria o utilizador no Firebase Auth
         const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
-        const user = userCredential.user;
-
-        // 2. Salva no Database - CAMPO 'username' É O SEGREDO
-        await set(ref(db, 'users/' + user.uid), {
+        await set(ref(db, 'users/' + userCredential.user.uid), {
           username: name,
           email: email,
-          totalCart: 0,
-          createdAt: new Date().toISOString()
+          totalCart: 0
         });
-
-        document.getElementById("msg").style.display = "block";
-        setTimeout(() => {
-          window.location.href = "app.html";
-        }, 1500);
-
-      } catch (error) {
-        alert("Erro ao criar conta: " + error.message);
-      }
+        window.location.href = "app.html";
+      } catch (error) { alert("Erro: " + error.message); }
     };
   </script>
-
 </body>
 </html>

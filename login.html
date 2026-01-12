@@ -7,38 +7,25 @@
   <style>
     .login-body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #d40000; margin: 0; }
     .login-card { background: white; padding: 30px; border-radius: 12px; width: 90%; max-width: 380px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
-    .login-logo { width: 160px; margin-bottom: 20px; }
-    h2 { color: #333; margin-bottom: 20px; font-size: 22px; }
+    .login-logo { width: 180px; margin-bottom: 20px; }
     input { width: 100%; padding: 14px; margin: 10px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 16px; }
-    button { width: 100%; padding: 14px; background-color: #d40000; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 16px; transition: background 0.3s; }
-    button:hover { background-color: #b30000; }
-    .footer-links { margin-top: 20px; font-size: 14px; color: #666; }
-    .footer-links a { color: #d40000; text-decoration: none; font-weight: bold; }
-    .forgot-password { display: block; margin-top: 15px; font-size: 13px; color: #888; text-decoration: none; cursor: pointer; }
+    button { width: 100%; padding: 14px; background-color: #d40000; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; }
+    .switch { margin-top: 20px; font-size: 14px; }
+    a { color: #d40000; text-decoration: none; font-weight: bold; }
   </style>
 </head>
 <body class="login-body">
-
   <div class="login-card">
     <img src="logo-white.jpg" class="login-logo" alt="Scanlist Market">
-    
-    <h2>Entrar no App</h2>
-
-    <input type="email" id="loginEmail" placeholder="Seu e-mail">
-    <input type="password" id="loginPass" placeholder="Sua senha">
-
-    <button id="btnLoginReal">Entrar</button>
-
-    <span class="forgot-password" id="btnRecuperar">Esqueci-me da senha</span>
-
-    <div class="footer-links">
-      Ainda não tem conta? <a href="index.html">Criar acesso</a>
-    </div>
+    <input type="email" id="email" placeholder="Email">
+    <input type="password" id="pass" placeholder="Senha">
+    <button id="btnLogin">Entrar</button>
+    <div class="switch">Ainda não tem conta? <a href="index.html">Criar acesso</a></div>
   </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
-    import { getAuth, signInWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js";
+    import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCtke_2T3e0HDDMqJsfJsRGs5KcKtN3Xe8",
@@ -53,37 +40,13 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
 
-    // Conexão do botão de login
-    document.getElementById("btnLoginReal").onclick = async function() {
-      const email = document.getElementById("loginEmail").value;
-      const pass = document.getElementById("loginPass").value;
-
-      if (!email || !pass) {
-        alert("Preencha e-mail e senha!");
-        return;
-      }
-
+    document.getElementById("btnLogin").onclick = async function() {
+      const email = document.getElementById("email").value;
+      const pass = document.getElementById("pass").value;
       try {
         await signInWithEmailAndPassword(auth, email, pass);
         window.location.href = "app.html";
-      } catch (error) {
-        alert("Erro: E-mail ou senha incorretos.");
-      }
-    };
-
-    // Conexão do botão de esqueci a senha
-    document.getElementById("btnRecuperar").onclick = async function() {
-      const email = document.getElementById("loginEmail").value;
-      if (!email) {
-        alert("Digite o e-mail no campo acima primeiro.");
-        return;
-      }
-      try {
-        await sendPasswordResetEmail(auth, email);
-        alert("E-mail de recuperação enviado!");
-      } catch (error) {
-        alert("Erro ao enviar e-mail de recuperação.");
-      }
+      } catch (error) { alert("Erro: E-mail ou senha incorretos."); }
     };
   </script>
 </body>
