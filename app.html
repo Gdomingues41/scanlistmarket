@@ -2,42 +2,41 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Scanlist Market - Carrinho Inteligente</title>
+  <title>Scanlist Market - Carrinho</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
   <style>
     :root { --primary: #d40000; --success: #28a745; --gray: #f4f4f4; }
-    body { font-family: 'Segoe UI', sans-serif; margin: 0; background: var(--gray); }
+    body { font-family: sans-serif; margin: 0; background: var(--gray); }
     .header { background: var(--primary); color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
-    
     .container { padding: 20px; text-align: center; max-width: 500px; margin: 0 auto; }
-    #reader { width: 100%; border-radius: 12px; overflow: hidden; display: none; background: #000; margin-bottom: 15px; }
-    
-    .product-card { background: white; padding: 20px; border-radius: 12px; margin-top: 20px; display: none; box-shadow: 0 8px 16px rgba(0,0,0,0.1); }
+    #reader { width: 100%; border-radius: 12px; display: none; background: #000; margin-bottom: 15px; }
+    .product-card { background: white; padding: 20px; border-radius: 12px; display: none; box-shadow: 0 8px 16px rgba(0,0,0,0.1); }
     .product-img { width: 120px; height: 120px; object-fit: contain; margin-bottom: 10px; }
     
-    input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
-    .qty-container { display: flex; align-items: center; gap: 10px; margin: 10px 0; }
+    label { display: block; text-align: left; font-size: 13px; color: #666; margin-top: 10px; }
+    input { width: 100%; padding: 12px; margin: 5px 0 10px 0; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
     
-    .btn { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; font-size: 16px; transition: 0.3s; }
-    .btn:active { transform: scale(0.98); }
-    .btn-save { background: var(--success); }
+    .btn { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; font-size: 16px; }
+    .cart-container { position: relative; display: inline-block; cursor: pointer; font-size: 24px; }
     
+    .cart-badge { 
+      position: absolute; top: -5px; right: -8px; 
+      background: white; color: var(--primary); 
+      border: 1px solid var(--primary); border-radius: 50%; 
+      padding: 2px 6px; font-size: 10px; font-weight: bold; 
+      display: none; min-width: 12px; text-align: center;
+    }
+    
+    .total-footer { background: white; padding: 20px; border-radius: 12px; margin-top: 20px; border-top: 4px solid var(--primary); }
     .cart-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 200; overflow-y: auto; padding: 20px; box-sizing: border-box; }
-    .cart-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; text-align: left; }
-    
-    .total-footer { background: white; padding: 20px; border-radius: 12px; margin-top: 20px; border-top: 4px solid var(--primary); box-shadow: 0 -4px 10px rgba(0,0,0,0.05); }
-    .cart-badge { background: white; color: var(--primary); border-radius: 50%; padding: 2px 7px; font-size: 12px; font-weight: bold; position: absolute; top: 10px; right: 45px; }
   </style>
 </head>
 <body>
-
   <header class="header">
     <div><small>Olá,</small> <br><span id="userNameDisplay" style="font-weight: bold;">...</span></div>
     <div style="display: flex; gap: 20px; align-items: center;">
-      <div id="btnVerCarrinho" style="cursor:pointer; font-size: 24px; position: relative;">
-        🛒 <span class="cart-badge" id="cartCount">0</span>
-      </div>
+      <div class="cart-container" id="btnVerCarrinho">🛒<span class="cart-badge" id="cartCount">0</span></div>
       <a href="settings.html" style="text-decoration:none; font-size: 22px;">⚙️</a>
     </div>
   </header>
@@ -48,21 +47,22 @@
 
     <div id="productCard" class="product-card">
       <img id="pImg" src="" class="product-img">
-      <h3 id="pNome" style="margin:0;">Buscando...</h3>
-      <p id="pEan" style="color: #888; font-size: 12px; margin-bottom: 15px;"></p>
       
-      <label style="display:block; text-align:left; font-size:14px;">Preço unitário (R$):</label>
-      <input type="number" id="pPreco" placeholder="0,00" step="0.01">
+      <label>Nome do Produto:</label>
+      <input type="text" id="pNomeInput" placeholder="Ex: Arroz 5kg">
       
-      <label style="display:block; text-align:left; font-size:14px;">Quantidade:</label>
+      <label>Preço Unitário (R$):</label>
+      <input type="number" id="pPreco" placeholder="0.00" step="0.01">
+      
+      <label>Quantidade:</label>
       <input type="number" id="pQtd" value="1" min="1">
       
-      <button class="btn btn-save" id="btnConfirmar">ADICIONAR AO CARRINHO</button>
+      <button class="btn" id="btnConfirmar" style="background:var(--success)">ADICIONAR AO CARRINHO</button>
       <button class="btn" style="background:#666; margin-top:10px; padding:8px; font-size:12px;" id="btnFecharCard">Cancelar</button>
     </div>
 
     <div class="total-footer">
-      <span style="color: #666; font-size: 14px; text-transform: uppercase;">Total Acumulado</span>
+      <span style="font-size: 14px; color: #666;">TOTAL ACUMULADO</span>
       <div style="font-size: 36px; font-weight: bold; color: var(--primary);">R$ <span id="totalGeral">0.00</span></div>
     </div>
   </main>
@@ -70,13 +70,10 @@
   <div id="modalCarrinho" class="cart-modal">
     <div style="display:flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--primary); padding-bottom: 10px;">
       <h2 style="margin:0;">Meu Carrinho</h2>
-      <button onclick="document.getElementById('modalCarrinho').style.display='none'" style="border:none; background:none; font-size:30px; cursor:pointer;">&times;</button>
+      <button onclick="document.getElementById('modalCarrinho').style.display='none'" style="border:none; background:none; font-size:30px;">&times;</button>
     </div>
-    <div id="listaItensCarrinho" style="margin-top:20px;">
-      </div>
-    <div style="margin-top:30px; text-align: center;">
-      <button class="btn" onclick="document.getElementById('modalCarrinho').style.display='none'">Continuar Comprando</button>
-    </div>
+    <div id="listaItensCarrinho" style="margin-top:20px;"></div>
+    <button class="btn" style="margin-top:20px;" onclick="document.getElementById('modalCarrinho').style.display='none'">Fechar</button>
   </div>
 
   <script type="module">
@@ -98,9 +95,7 @@
     const auth = getAuth(app);
     const db = getDatabase(app);
     let userUID = null;
-    let tempProduct = {};
 
-    // --- CARREGAR DADOS ---
     onAuthStateChanged(auth, (user) => {
       if (user) {
         userUID = user.uid;
@@ -111,15 +106,15 @@
             document.getElementById("totalGeral").innerText = (data.totalCart || 0).toFixed(2);
           }
         });
-        
-        // Monitora quantidade de itens para o badge
         onValue(ref(db, `users/${userUID}/items`), (snapshot) => {
-          document.getElementById("cartCount").innerText = snapshot.size || 0;
+          const count = snapshot.size || 0;
+          const badge = document.getElementById("cartCount");
+          badge.innerText = count;
+          badge.style.display = count > 0 ? "block" : "none";
         });
       } else { window.location.href = "login.html"; }
     });
 
-    // --- SCANNER ---
     const html5QrCode = new Html5Qrcode("reader");
     document.getElementById("btnIniciarScan").onclick = () => {
       document.getElementById("reader").style.display = "block";
@@ -131,47 +126,35 @@
       });
     };
 
-    // --- BUSCA API ---
     async function buscarAPI(codigo) {
       document.getElementById("productCard").style.display = "block";
-      document.getElementById("pNome").innerText = "Buscando...";
-      document.getElementById("pImg").src = "";
+      document.getElementById("pNomeInput").value = "Buscando...";
       try {
         const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${codigo.trim()}`);
         const data = await res.json();
-        if (data.status === 1) {
-          tempProduct = { nome: data.product.product_name || "Sem Nome", img: data.product.image_url || "" };
-          document.getElementById("pNome").innerText = tempProduct.nome;
-          document.getElementById("pImg").src = tempProduct.img;
-          document.getElementById("pEan").innerText = "EAN: " + codigo;
-        } else {
-          tempProduct = { nome: "Produto Manual", img: "" };
-          document.getElementById("pNome").innerText = "Não encontrado. Digite o nome:";
-          document.getElementById("pEan").innerText = "EAN: " + codigo;
-        }
-        document.getElementById("pPreco").focus();
-      } catch (e) { alert("Erro de conexão."); }
+        const nomeEncontrado = (data.status === 1) ? data.product.product_name : "";
+        document.getElementById("pNomeInput").value = nomeEncontrado;
+        document.getElementById("pImg").src = data.product?.image_url || "";
+        if(!nomeEncontrado) document.getElementById("pNomeInput").focus();
+      } catch (e) { 
+        document.getElementById("pNomeInput").value = "";
+        alert("Erro ao buscar produto online."); 
+      }
     }
 
-    // --- CONFIRMAR ADIÇÃO ---
     document.getElementById("btnConfirmar").onclick = async () => {
+      const nomeFinal = document.getElementById("pNomeInput").value;
       const preco = parseFloat(document.getElementById("pPreco").value);
       const qtd = parseInt(document.getElementById("pQtd").value);
+
+      if (!nomeFinal) return alert("Por favor, insira o nome do produto.");
       if (!preco || preco <= 0) return alert("Insira o preço!");
 
       const subtotal = preco * qtd;
       const snap = await get(ref(db, 'users/' + userUID));
       const totalAtual = snap.val().totalCart || 0;
 
-      // Salva item individualmente para a lista do carrinho
-      await push(ref(db, `users/${userUID}/items`), {
-        nome: tempProduct.nome,
-        preco: preco,
-        qtd: qtd,
-        subtotal: subtotal
-      });
-
-      // Atualiza o total geral
+      await push(ref(db, `users/${userUID}/items`), { nome: nomeFinal, preco, qtd, subtotal });
       await update(ref(db, 'users/' + userUID), { totalCart: totalAtual + subtotal });
       
       document.getElementById("productCard").style.display = "none";
@@ -179,25 +162,19 @@
       document.getElementById("pQtd").value = "1";
     };
 
-    // --- VER CARRINHO (MODAL) ---
     document.getElementById("btnVerCarrinho").onclick = async () => {
       const modal = document.getElementById("modalCarrinho");
       const lista = document.getElementById("listaItensCarrinho");
       modal.style.display = "block";
       lista.innerHTML = "Carregando...";
-
       const snapshot = await get(ref(db, `users/${userUID}/items`));
-      lista.innerHTML = "";
-      if (snapshot.exists()) {
-        snapshot.forEach((itemSnap) => {
-          const item = itemSnap.val();
-          lista.innerHTML += `
-            <div class="cart-item">
-              <div><strong>${item.nome}</strong><br><small>${item.qtd}x R$ ${item.preco.toFixed(2)}</small></div>
-              <div>R$ ${item.subtotal.toFixed(2)}</div>
-            </div>`;
-        });
-      } else { lista.innerHTML = "<p>Carrinho vazio.</p>"; }
+      lista.innerHTML = snapshot.exists() ? "" : "Carrinho vazio.";
+      snapshot.forEach((itemSnap) => {
+        const item = itemSnap.val();
+        lista.innerHTML += `<div style="display:flex; justify-content:space-between; padding:10px; border-bottom:1px solid #eee; text-align:left;">
+          <div><strong>${item.nome}</strong><br><small>${item.qtd}x R$ ${item.preco.toFixed(2)}</small></div>
+          <div>R$ ${item.subtotal.toFixed(2)}</div></div>`;
+      });
     };
 
     document.getElementById("btnFecharCard").onclick = () => document.getElementById("productCard").style.display = "none";
