@@ -9,7 +9,6 @@
     :root { --primary: #d40000; --success: #28a745; --gray: #f4f4f4; }
     body { font-family: sans-serif; margin: 0; background: var(--gray); padding-bottom: 80px; }
     
-    /* Header Ajustado para Contraste */
     .header { 
       background: var(--primary); 
       color: white; 
@@ -23,6 +22,11 @@
       box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
     
+    .header-info { display: flex; align-items: center; gap: 10px; }
+    .header-logo { height: 30px; }
+    .user-text { font-size: 14px; font-weight: bold; }
+    .user-small { font-size: 10px; opacity: 0.8; }
+
     .container { padding: 20px; text-align: center; max-width: 500px; margin: 0 auto; }
     #reader { width: 100%; border-radius: 12px; display: none; background: #000; margin-bottom: 15px; }
     
@@ -49,7 +53,6 @@
     
     .total-footer { background: white; padding: 15px; border-radius: 12px; margin-top: 20px; border-top: 4px solid var(--primary); }
     
-    /* Botão Sair com Alto Contraste */
     .logout-btn { 
       background: white; 
       border: none; 
@@ -66,19 +69,18 @@
     }
 
     .cart-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 200; overflow-y: auto; padding: 20px; box-sizing: border-box; }
-    .cart-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #eee; }
+    .cart-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #eee; text-align: left; }
     .btn-del { color: #d40000; border: none; background: none; font-size: 18px; cursor: pointer; }
   </style>
 </head>
 <body>
   <header class="header">
-    <div style="display: flex; align-items: center; gap: 10px;">
-        <img src="logo-white.png" style="height: 30px;" alt="Logo">
-        <div><small style="font-size: 10px; opacity: 0.8;">Olá,</small> <br><span id="userNameDisplay" style="font-weight: bold; font-size: 14px;">...</span></div>
+    <div class="header-info">
+        <img src="logo-white.png" class="header-logo" alt="Logo">
+        <div><span class="user-small">Olá,</span> <br><span id="userNameDisplay" class="user-text">...</span></div>
     </div>
     <div style="display: flex; gap: 15px; align-items: center;">
       <div class="cart-container" id="btnVerCarrinho">🛒<span class="cart-badge" id="cartCount">0</span></div>
-      <a href="settings.html" style="text-decoration:none; font-size: 22px;">⚙️</a>
       <button class="logout-btn" id="btnLogout" title="Sair">🚪</button>
     </div>
   </header>
@@ -89,14 +91,17 @@
 
     <div class="manual-box">
         <small style="color:#888">Busca Manual (Digite o Código):</small>
-        <input type="text" id="inputManualCode" placeholder="789...">
+        <input type="text" id="inputManualCode" placeholder="Digite o código de barras">
         <button class="btn" id="btnBuscaManual" style="padding: 10px; font-size: 14px; background: #444;">LOCALIZAR</button>
     </div>
 
     <div id="productCard" class="product-card">
       <img id="pImg" src="" class="product-img">
-      <input type="text" id="pNomeInput" placeholder="Nome do Produto">
-      <input type="number" id="pPreco" placeholder="Preço (0.00)" step="0.01">
+      <small style="color:#888; display:block; text-align:left;">Nome do Produto:</small>
+      <input type="text" id="pNomeInput" placeholder="Ex: Coca-Cola 2L">
+      
+      <small style="color:#888; display:block; text-align:left;">Preço Unitário (R$):</small>
+      <input type="number" id="pPreco" placeholder="0.00" step="0.01">
       
       <div class="qty-box">
         <button class="qty-btn" id="btnMinus">-</button>
@@ -104,7 +109,7 @@
         <button class="qty-btn" id="btnPlus">+</button>
       </div>
       
-      <button class="btn" id="btnConfirmar" style="background:var(--success)">ADICIONAR</button>
+      <button class="btn" id="btnConfirmar" style="background:var(--success)">ADICIONAR AO CARRINHO</button>
       <button class="btn" style="background:#666; margin-top:10px; padding:8px; font-size:12px;" id="btnFecharCard">Cancelar</button>
     </div>
 
@@ -129,7 +134,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js";
-    import { getDatabase, ref, onValue, update, push, get, remove } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-database.js";
+    import { getDatabase, ref, onValue, update, push, get, remove, set } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCtke_2T3e0HDDMqJsfJsRGs5KcKtN3Xe8",
@@ -146,6 +151,7 @@
     const db = getDatabase(app);
     let userUID = null;
     let currentQty = 1;
+    let lastScannedCode = "";
 
     onAuthStateChanged(auth, (user) => {
       if (user) {
@@ -193,30 +199,60 @@
     };
 
     async function buscarAPI(codigo) {
+      lastScannedCode = codigo.trim();
       document.getElementById("productCard").style.display = "block";
       document.getElementById("pNomeInput").value = "Buscando...";
       currentQty = 1; document.getElementById("pQtdDisplay").innerText = 1;
+
       try {
-        const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${codigo.trim()}`);
-        const data = await res.json();
-        const nome = (data.status === 1) ? data.product.product_name : "";
-        document.getElementById("pNomeInput").value = nome;
-        document.getElementById("pImg").src = data.product?.image_url || "";
-        if(!nome) document.getElementById("pNomeInput").focus();
+        // 1º: Verifica se já existe na nossa base corrigida do Firebase
+        const localSnap = await get(ref(db, `products/${lastScannedCode}`));
+        
+        if (localSnap.exists()) {
+            const produtoSalvo = localSnap.val();
+            document.getElementById("pNomeInput").value = produtoSalvo.nome;
+            document.getElementById("pImg").src = produtoSalvo.imagem || "";
+        } else {
+            // 2º: Se não existir, busca na API externa
+            const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${lastScannedCode}`);
+            const data = await res.json();
+            const nome = (data.status === 1) ? data.product.product_name : "";
+            document.getElementById("pNomeInput").value = nome;
+            document.getElementById("pImg").src = data.product?.image_url || "";
+        }
+        
+        if(!document.getElementById("pNomeInput").value) document.getElementById("pNomeInput").focus();
         document.getElementById("inputManualCode").value = "";
-      } catch (e) { document.getElementById("pNomeInput").value = ""; }
+      } catch (e) { 
+          document.getElementById("pNomeInput").value = ""; 
+      }
     }
 
     document.getElementById("btnConfirmar").onclick = async () => {
-      const nome = document.getElementById("pNomeInput").value;
+      const nomeFinal = document.getElementById("pNomeInput").value;
       const preco = parseFloat(document.getElementById("pPreco").value);
-      if (!nome || !preco) return alert("Preencha os campos!");
+      const imgURL = document.getElementById("pImg").src;
+
+      if (!nomeFinal || !preco) return alert("Preencha o nome e o preço!");
+
       const subtotal = preco * currentQty;
+
+      // ATUALIZA A MEMÓRIA GLOBAL DO FIREBASE (Corrige o nome para futuras buscas)
+      if (lastScannedCode) {
+          await set(ref(db, `products/${lastScannedCode}`), {
+              nome: nomeFinal,
+              imagem: imgURL
+          });
+      }
+
+      // ADICIONA AO CARRINHO DO USUÁRIO
       const snap = await get(ref(db, 'users/' + userUID));
       const totalAtual = snap.val().totalCart || 0;
-      await push(ref(db, `users/${userUID}/items`), { nome, preco, qtd: currentQty, subtotal });
+      await push(ref(db, `users/${userUID}/items`), { nome: nomeFinal, preco, qtd: currentQty, subtotal });
       await update(ref(db, 'users/' + userUID), { totalCart: totalAtual + subtotal });
+      
       document.getElementById("productCard").style.display = "none";
+      document.getElementById("pPreco").value = "";
     };
 
     document.getElementById("btnVerCarrinho").onclick = carregarCarrinho;
