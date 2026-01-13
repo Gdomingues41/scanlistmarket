@@ -202,28 +202,35 @@
       lastScannedCode = codigo.trim();
       document.getElementById("productCard").style.display = "block";
       document.getElementById("pNomeInput").value = "Buscando...";
+      document.getElementById("pImg").src = ""; 
       currentQty = 1; document.getElementById("pQtdDisplay").innerText = 1;
 
       try {
-        // 1º: Verifica se já existe na nossa base corrigida do Firebase
+        // Busca primeiro no Firebase (Memória Local)
         const localSnap = await get(ref(db, `products/${lastScannedCode}`));
         
-        if (localSnap.exists()) {
+        if (localSnap.exists() && localSnap.val().nome) {
             const produtoSalvo = localSnap.val();
             document.getElementById("pNomeInput").value = produtoSalvo.nome;
             document.getElementById("pImg").src = produtoSalvo.imagem || "";
         } else {
-            // 2º: Se não existir, busca na API externa
+            // Caso não exista no Firebase, força a busca na API externa
             const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${lastScannedCode}`);
             const data = await res.json();
-            const nome = (data.status === 1) ? data.product.product_name : "";
-            document.getElementById("pNomeInput").value = nome;
-            document.getElementById("pImg").src = data.product?.image_url || "";
+            
+            if (data.status === 1 && data.product) {
+                document.getElementById("pNomeInput").value = data.product.product_name || "Produto sem nome";
+                document.getElementById("pImg").src = data.product.image_url || "";
+            } else {
+                document.getElementById("pNomeInput").value = ""; // Deixa vazio para o usuário digitar
+                document.getElementById("pNomeInput").placeholder = "Produto não encontrado. Digite o nome:";
+            }
         }
         
-        if(!document.getElementById("pNomeInput").value) document.getElementById("pNomeInput").focus();
+        document.getElementById("pNomeInput").focus();
         document.getElementById("inputManualCode").value = "";
       } catch (e) { 
+          console.error("Erro na busca:", e);
           document.getElementById("pNomeInput").value = ""; 
       }
     }
@@ -237,7 +244,6 @@
 
       const subtotal = preco * currentQty;
 
-      // ATUALIZA A MEMÓRIA GLOBAL DO FIREBASE (Corrige o nome para futuras buscas)
       if (lastScannedCode) {
           await set(ref(db, `products/${lastScannedCode}`), {
               nome: nomeFinal,
@@ -245,7 +251,6 @@
           });
       }
 
-      // ADICIONA AO CARRINHO DO USUÁRIO
       const snap = await get(ref(db, 'users/' + userUID));
       const totalAtual = snap.val().totalCart || 0;
       await push(ref(db, `users/${userUID}/items`), { nome: nomeFinal, preco, qtd: currentQty, subtotal });
