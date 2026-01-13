@@ -246,12 +246,12 @@
 <body>
   <div id="loading" class="loading-overlay">
     <div class="spinner"></div>
-    <p>Buscando produto...</p>
+    <p id="loadingText">Buscando produto...</p>
   </div>
 
   <header class="header">
     <div class="header-info">
-        <img src="logo-white.png" class="header-logo" alt="Logo" onerror="this.src='https://via.placeholder.com/35x35?text=S'">
+        <img src="logo-white.png" class="header-logo" alt="Logo" onerror="this.src='https://img.icons8.com/ios-filled/50/ffffff/shopping-cart.png'">
         <div>
           <small style="font-size: 10px; opacity: 0.9; text-transform: uppercase; letter-spacing: 1px;">Bem-vindo,</small> 
           <br><span id="userNameDisplay" style="font-weight: bold; font-size: 16px;">Carregando...</span>
@@ -274,7 +274,7 @@
         <div class="input-group">
           <label>BUSCA MANUAL (CÓDIGO DE BARRAS)</label>
           <div style="display: flex; gap: 10px;">
-            <input type="number" id="inputManualCode" placeholder="Ex: 7891234567890" style="flex: 1;">
+            <input type="text" id="inputManualCode" placeholder="Ex: 7891234567890" inputmode="numeric" style="flex: 1;">
             <button class="btn" id="btnBuscaManual" style="width: auto; padding: 0 20px; background: #444;">OK</button>
           </div>
         </div>
@@ -282,7 +282,7 @@
 
     <div id="productCard" class="product-card">
       <div class="product-img-container">
-        <img id="pImg" src="" class="product-img" onerror="this.src='https://via.placeholder.com/150?text=Sem+Foto'">
+        <img id="pImg" src="" class="product-img" onerror="this.src='https://img.icons8.com/ios/100/cccccc/image.png'">
       </div>
       
       <div class="input-group">
@@ -348,38 +348,34 @@
 
     const html5QrCode = new Html5Qrcode("reader");
 
-    // Monitoramento de Autenticação
     onAuthStateChanged(auth, (user) => {
       if (user) {
         userUID = user.uid;
-        // Carregar dados do usuário e total
         onValue(ref(db, 'users/' + userUID), (snapshot) => {
           const data = snapshot.val();
           if (data) {
             document.getElementById("userNameDisplay").innerText = data.username || "Usuário";
             document.getElementById("totalGeral").innerText = (data.totalCart || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
           }
-        });
-        // Carregar contagem de itens
+        }, (error) => console.error("Erro ao ler perfil:", error));
+
         onValue(ref(db, `users/${userUID}/items`), (snapshot) => {
           const count = snapshot.size || 0;
           const badge = document.getElementById("cartCount");
           badge.innerText = count;
           badge.style.display = count > 0 ? "flex" : "none";
-        });
+        }, (error) => console.error("Erro ao ler itens:", error));
       } else { 
         window.location.href = "login.html"; 
       }
     });
 
-    // Logout
     document.getElementById("btnLogout").onclick = () => { 
       if(confirm("Deseja realmente sair?")) {
         signOut(auth).then(() => window.location.href = "login.html"); 
       }
     };
 
-    // Controle de Quantidade
     document.getElementById("btnPlus").onclick = () => { 
       currentQty++; 
       document.getElementById("pQtdDisplay").innerText = currentQty; 
@@ -391,7 +387,6 @@
       } 
     };
 
-    // Scanner
     const btnIniciar = document.getElementById("btnIniciarScan");
     const btnParar = document.getElementById("btnPararScan");
     const readerDiv = document.getElementById("reader");
@@ -409,7 +404,7 @@
           pararScanner();
           buscarAPI(codigo);
         },
-        (errorMessage) => { /* Silencioso para não poluir console */ }
+        (errorMessage) => { }
       ).catch(err => {
         alert("Erro ao acessar câmera: " + err);
         pararScanner();
@@ -429,19 +424,19 @@
       }
     }
 
-    // Busca Manual
     document.getElementById("btnBuscaManual").onclick = () => {
-        const code = document.getElementById("inputManualCode").value;
+        const code = document.getElementById("inputManualCode").value.trim();
         if(!code) return alert("Digite um código de barras!");
         buscarAPI(code);
     };
 
-    // Função Principal de Busca
     async function buscarAPI(codigo) {
-      lastScannedCode = codigo.trim();
-      document.getElementById("loading").style.display = "flex";
+      lastScannedCode = codigo.toString().trim();
+      console.log("Iniciando busca para:", lastScannedCode);
       
-      // Reset Card
+      document.getElementById("loading").style.display = "flex";
+      document.getElementById("loadingText").innerText = "Buscando produto...";
+      
       document.getElementById("productCard").style.display = "none";
       document.getElementById("pNomeInput").value = "";
       document.getElementById("pPreco").value = "";
@@ -450,18 +445,32 @@
       document.getElementById("pQtdDisplay").innerText = 1;
 
       try {
-        // 1. Tenta buscar no Banco de Dados Local (Firebase) primeiro
-        const localSnap = await get(ref(db, `products/${lastScannedCode}`));
+        // 1. Tenta buscar no Firebase (com tratamento de erro de permissão)
+        let foundLocally = false;
+        try {
+          const localSnap = await get(ref(db, `products/${lastScannedCode}`));
+          if (localSnap.exists()) {
+              const p = localSnap.val();
+              document.getElementById("pNomeInput").value = p.nome || "";
+              document.getElementById("pImg").src = p.imagem || "";
+              foundLocally = true;
+              console.log("Produto encontrado no Firebase");
+          }
+        } catch (dbErr) {
+          // Se der erro de permissão, apenas logamos e continuamos para a API externa
+          console.warn("Firebase Products inacessível (provavelmente regras de segurança):", dbErr.message);
+        }
         
-        if (localSnap.exists()) {
-            const p = localSnap.val();
-            document.getElementById("pNomeInput").value = p.nome || "";
-            document.getElementById("pImg").src = p.imagem || "";
-        } else {
-            // 2. Se não tem no Firebase, busca na API do Open Food Facts
+        if (!foundLocally) {
+            // 2. Busca na API do Open Food Facts
+            console.log("Buscando na API externa...");
             try {
               const response = await fetch(`https://world.openfoodfacts.org/api/v2/product/${lastScannedCode}?fields=product_name,image_url,brands`);
+              
+              if (!response.ok) throw new Error("Falha na resposta da rede");
+              
               const data = await response.json();
+              console.log("Dados da API:", data);
               
               if (data.status === 1 && data.product) {
                   const nomeProd = data.product.product_name || "";
@@ -469,6 +478,7 @@
                   document.getElementById("pNomeInput").value = nomeProd + marca;
                   document.getElementById("pImg").src = data.product.image_url || "";
               } else {
+                  console.log("Produto não encontrado na API");
                   document.getElementById("pNomeInput").placeholder = "Produto não encontrado. Digite o nome:";
               }
             } catch (apiErr) {
@@ -481,10 +491,8 @@
         document.getElementById("productCard").style.display = "block";
         document.getElementById("inputManualCode").value = "";
         
-        // Scroll suave para o card
         document.getElementById("productCard").scrollIntoView({ behavior: 'smooth' });
         
-        // Focar no preço se o nome já existir, senão focar no nome
         setTimeout(() => {
           if(document.getElementById("pNomeInput").value) {
             document.getElementById("pPreco").focus();
@@ -496,11 +504,11 @@
       } catch (e) {
         console.error("Erro geral na busca:", e);
         document.getElementById("loading").style.display = "none";
-        alert("Ocorreu um erro ao processar a busca.");
+        document.getElementById("productCard").style.display = "block";
+        document.getElementById("pNomeInput").placeholder = "Digite o nome manualmente:";
       }
     }
 
-    // Confirmar Adição ao Carrinho
     document.getElementById("btnConfirmar").onclick = async () => {
       const nome = document.getElementById("pNomeInput").value;
       const precoStr = document.getElementById("pPreco").value.replace(',', '.');
@@ -512,15 +520,16 @@
       const subtotal = preco * currentQty;
       
       try {
-        // Salva/Atualiza na "memória" de produtos para futuras buscas
+        // Tenta salvar na memória de produtos (ignora se falhar por permissão)
         if (lastScannedCode) {
-          await set(ref(db, `products/${lastScannedCode}`), { 
-            nome: nome, 
-            imagem: document.getElementById("pImg").src 
-          });
+          try {
+            await set(ref(db, `products/${lastScannedCode}`), { 
+              nome: nome, 
+              imagem: document.getElementById("pImg").src 
+            });
+          } catch (e) { console.warn("Não foi possível salvar na memória global de produtos."); }
         }
 
-        // Adiciona ao carrinho do usuário
         const userRef = ref(db, 'users/' + userUID);
         const snap = await get(userRef);
         const totalAtual = snap.val().totalCart || 0;
@@ -535,17 +544,15 @@
         
         await update(userRef, { totalCart: totalAtual + subtotal });
         
-        // Feedback e Reset
         document.getElementById("productCard").style.display = "none";
         document.getElementById("pPreco").value = "";
         alert("Produto adicionado!");
         
       } catch (err) {
-        alert("Erro ao salvar: " + err.message);
+        alert("Erro ao salvar no carrinho: " + err.message);
       }
     };
 
-    // Gerenciamento do Carrinho
     document.getElementById("btnVerCarrinho").onclick = carregarCarrinho;
     
     async function carregarCarrinho() {
@@ -582,7 +589,6 @@
           lista.appendChild(itemDiv);
         });
 
-        // Eventos de Deletar
         document.querySelectorAll(".btn-del").forEach(btn => {
           btn.onclick = async (e) => {
             const key = e.currentTarget.dataset.key;
@@ -601,7 +607,6 @@
       }
     }
 
-    // Finalizar e Fechar
     document.getElementById("btnFinalizarCompra").onclick = async () => { 
       const snap = await get(ref(db, `users/${userUID}/items`));
       if(!snap.exists()) return alert("O carrinho está vazio!");
