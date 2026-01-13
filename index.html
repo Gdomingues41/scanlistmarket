@@ -16,7 +16,7 @@
 </head>
 <body class="login-body">
   <div class="login-card">
-    <img src="logo-white.jpg" class="login-logo" alt="Scanlist Market">
+    <img src="logo-white.png" class="login-logo" alt="Scanlist Market">
     <input type="text" id="name" placeholder="Nome completo">
     <input type="email" id="email" placeholder="Email">
     <input type="password" id="password" placeholder="Senha (mínimo 6 caracteres)">
@@ -45,19 +45,19 @@
     const db = getDatabase(app);
 
     document.getElementById("btnCriarAcesso").onclick = async function() {
-      const name = document.getElementById("name").value;
-      const email = document.getElementById("email").value;
-      const pass = document.getElementById("password").value;
-      const confirm = document.getElementById("confirm").value;
+      const nameInput = document.getElementById("name").value;
+      const emailInput = document.getElementById("email").value;
+      const passInput = document.getElementById("password").value;
+      const confirmInput = document.getElementById("confirm").value;
 
-      if (!name || !email || !pass || !confirm) return alert("Preencha todos os campos!");
-      if (pass !== confirm) return alert("As senhas não conferem!");
+      if (!nameInput || !emailInput || !passInput || !confirmInput) return alert("Preencha todos os campos!");
+      if (passInput !== confirmInput) return alert("As senhas não conferem!");
 
       try {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
+        const userCredential = await createUserWithEmailAndPassword(auth, emailInput, passInput);
         await set(ref(db, 'users/' + userCredential.user.uid), {
-          username: name,
-          email: email,
+          username: nameInput,
+          email: emailInput,
           totalCart: 0
         });
         window.location.href = "app.html";

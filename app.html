@@ -14,10 +14,9 @@
     .product-card { background: white; padding: 20px; border-radius: 12px; display: none; box-shadow: 0 8px 16px rgba(0,0,0,0.1); }
     .product-img { width: 100px; height: 100px; object-fit: contain; margin-bottom: 10px; }
     
-    /* Controles de Quantidade */
     .qty-box { display: flex; align-items: center; justify-content: center; gap: 15px; margin: 15px 0; }
     .qty-btn { background: #eee; border: none; width: 40px; height: 40px; border-radius: 50%; font-size: 20px; font-weight: bold; cursor: pointer; }
-    #pQtdDisplay { font-size: 22px; font-weight: bold; width: 30px; }
+    #pQtdDisplay { font-size: 22px; font-weight: bold; min-width: 30px; }
 
     input { width: 100%; padding: 12px; margin: 5px 0 10px 0; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; text-align: center; font-size: 18px; }
     .btn { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; font-size: 16px; }
@@ -71,7 +70,6 @@
       <button id="btnFecharCarrinho" style="border:none; background:none; font-size:30px; cursor:pointer;">&times;</button>
     </div>
     <div id="listaItensCarrinho" style="margin-top:20px;"></div>
-    
     <div style="margin-top:40px; border-top:2px solid #eee; padding-top:20px;">
       <button class="btn" id="btnFinalizarCompra" style="background:#000;">FINALIZAR COMPRA</button>
       <button class="btn" style="background:#666; margin-top:10px;" id="btnVoltar">Voltar</button>
@@ -81,7 +79,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js";
-    import { getDatabase, ref, onValue, update, push, get, remove, set } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-database.js";
+    import { getDatabase, ref, onValue, update, push, get, remove } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCtke_2T3e0HDDMqJsfJsRGs5KcKtN3Xe8",
@@ -118,11 +116,9 @@
       } else { window.location.href = "login.html"; }
     });
 
-    // --- CONTROLES DE QUANTIDADE ---
     document.getElementById("btnPlus").onclick = () => { currentQty++; document.getElementById("pQtdDisplay").innerText = currentQty; };
     document.getElementById("btnMinus").onclick = () => { if(currentQty > 1) { currentQty--; document.getElementById("pQtdDisplay").innerText = currentQty; } };
 
-    // --- SCANNER ---
     const html5QrCode = new Html5Qrcode("reader");
     document.getElementById("btnIniciarScan").onclick = () => {
       document.getElementById("reader").style.display = "block";
@@ -152,18 +148,15 @@
       const nome = document.getElementById("pNomeInput").value;
       const preco = parseFloat(document.getElementById("pPreco").value);
       if (!nome || !preco) return alert("Preencha os campos!");
-
       const subtotal = preco * currentQty;
       const snap = await get(ref(db, 'users/' + userUID));
       const totalAtual = snap.val().totalCart || 0;
-
       await push(ref(db, `users/${userUID}/items`), { nome, preco, qtd: currentQty, subtotal });
       await update(ref(db, 'users/' + userUID), { totalCart: totalAtual + subtotal });
       document.getElementById("productCard").style.display = "none";
       document.getElementById("pPreco").value = "";
     };
 
-    // --- CARRINHO E EXCLUSÃO ---
     document.getElementById("btnVerCarrinho").onclick = carregarCarrinho;
     async function carregarCarrinho() {
       const modal = document.getElementById("modalCarrinho");
@@ -173,22 +166,20 @@
       lista.innerHTML = snapshot.exists() ? "" : "Carrinho vazio.";
       snapshot.forEach((itemSnap) => {
         const item = itemSnap.val();
-        const key = itemSnap.key;
         lista.innerHTML += `
           <div class="cart-item">
             <div><strong>${item.nome}</strong><br><small>${item.qtd}x R$ ${item.preco.toFixed(2)}</small></div>
             <div style="display:flex; align-items:center; gap:15px;">
               <span>R$ ${item.subtotal.toFixed(2)}</span>
-              <button class="btn-del" data-key="${key}" data-sub="${item.subtotal}">🗑️</button>
+              <button class="btn-del" data-key="${itemSnap.key}" data-sub="${item.subtotal}">🗑️</button>
             </div>
           </div>`;
       });
 
-      // Atribui evento de excluir aos ícones de lixo
       document.querySelectorAll(".btn-del").forEach(btn => {
         btn.onclick = async (e) => {
-          const key = e.target.dataset.key;
-          const sub = parseFloat(e.target.dataset.sub);
+          const key = e.currentTarget.dataset.key;
+          const sub = parseFloat(e.currentTarget.dataset.sub);
           const snap = await get(ref(db, 'users/' + userUID));
           const totalAtual = snap.val().totalCart || 0;
           await remove(ref(db, `users/${userUID}/items/${key}`));
@@ -198,13 +189,11 @@
       });
     }
 
-    // --- FINALIZAR COMPRA ---
     document.getElementById("btnFinalizarCompra").onclick = async () => {
       if(confirm("Deseja finalizar esta compra e limpar o carrinho?")) {
         await remove(ref(db, `users/${userUID}/items`));
         await update(ref(db, 'users/' + userUID), { totalCart: 0 });
         document.getElementById("modalCarrinho").style.display = "none";
-        alert("Compra finalizada com sucesso!");
       }
     };
 
