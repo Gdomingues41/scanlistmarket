@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Scanlist Market - Carrinho</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
   <style>
     :root { 
@@ -17,11 +17,12 @@
     }
     
     body { 
-      font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
       margin: 0; 
       background: var(--gray-light); 
       color: var(--text-dark);
       padding-bottom: 80px; 
+      -webkit-font-smoothing: antialiased;
     }
     
     .header { 
@@ -50,6 +51,11 @@
       background: #000; 
       margin-bottom: 20px;
       box-shadow: var(--shadow);
+    }
+    
+    /* Ajuste para vídeo no iOS */
+    #reader video {
+      object-fit: cover !important;
     }
     
     .product-card { 
@@ -123,6 +129,7 @@
       box-sizing: border-box; 
       font-size: 16px; 
       transition: border-color 0.3s;
+      -webkit-appearance: none;
     }
     
     input:focus { border-color: var(--primary); outline: none; }
@@ -139,6 +146,7 @@
       font-size: 16px; 
       transition: background 0.3s, transform 0.1s;
       box-shadow: 0 4px 6px rgba(212, 0, 0, 0.2);
+      -webkit-tap-highlight-color: transparent;
     }
     
     .btn:active { transform: translateY(2px); }
@@ -397,16 +405,24 @@
       btnParar.style.display = "block";
       isScanning = true;
       
+      // Configuração otimizada para iOS/Safari
+      const config = { 
+        fps: 10, 
+        qrbox: { width: 250, height: 150 },
+        aspectRatio: 1.0
+      };
+
       html5QrCode.start(
         { facingMode: "environment" }, 
-        { fps: 10, qrbox: { width: 250, height: 150 } }, 
+        config, 
         (codigo) => {
           pararScanner();
           buscarAPI(codigo);
         },
         (errorMessage) => { }
       ).catch(err => {
-        alert("Erro ao acessar câmera: " + err);
+        console.error("Erro ao acessar câmera:", err);
+        alert("Erro ao acessar câmera. Verifique se deu permissão no Safari.");
         pararScanner();
       });
     };
@@ -445,7 +461,6 @@
       document.getElementById("pQtdDisplay").innerText = 1;
 
       try {
-        // 1. Tenta buscar no Firebase (com tratamento de erro de permissão)
         let foundLocally = false;
         try {
           const localSnap = await get(ref(db, `products/${lastScannedCode}`));
@@ -454,31 +469,22 @@
               document.getElementById("pNomeInput").value = p.nome || "";
               document.getElementById("pImg").src = p.imagem || "";
               foundLocally = true;
-              console.log("Produto encontrado no Firebase");
           }
         } catch (dbErr) {
-          // Se der erro de permissão, apenas logamos e continuamos para a API externa
-          console.warn("Firebase Products inacessível (provavelmente regras de segurança):", dbErr.message);
+          console.warn("Firebase Products inacessível:", dbErr.message);
         }
         
         if (!foundLocally) {
-            // 2. Busca na API do Open Food Facts
-            console.log("Buscando na API externa...");
             try {
               const response = await fetch(`https://world.openfoodfacts.org/api/v2/product/${lastScannedCode}?fields=product_name,image_url,brands`);
-              
               if (!response.ok) throw new Error("Falha na resposta da rede");
-              
               const data = await response.json();
-              console.log("Dados da API:", data);
-              
               if (data.status === 1 && data.product) {
                   const nomeProd = data.product.product_name || "";
                   const marca = data.product.brands ? ` (${data.product.brands})` : "";
                   document.getElementById("pNomeInput").value = nomeProd + marca;
                   document.getElementById("pImg").src = data.product.image_url || "";
               } else {
-                  console.log("Produto não encontrado na API");
                   document.getElementById("pNomeInput").placeholder = "Produto não encontrado. Digite o nome:";
               }
             } catch (apiErr) {
@@ -490,7 +496,6 @@
         document.getElementById("loading").style.display = "none";
         document.getElementById("productCard").style.display = "block";
         document.getElementById("inputManualCode").value = "";
-        
         document.getElementById("productCard").scrollIntoView({ behavior: 'smooth' });
         
         setTimeout(() => {
@@ -520,7 +525,6 @@
       const subtotal = preco * currentQty;
       
       try {
-        // Tenta salvar na memória de produtos (ignora se falhar por permissão)
         if (lastScannedCode) {
           try {
             await set(ref(db, `products/${lastScannedCode}`), { 
