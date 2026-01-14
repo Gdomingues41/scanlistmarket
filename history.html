@@ -10,9 +10,9 @@
     body { font-family: -apple-system, sans-serif; background: var(--gray-light); margin: 0; padding-bottom: 30px; }
     .header { background: var(--primary); color: white; padding: 15px; display: flex; align-items: center; }
     .container { padding: 20px; max-width: 500px; margin: 0 auto; }
-    .card { background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 20px; }
+    .card { background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 20px; text-align: center; }
     .history-item { display: flex; justify-content: space-between; padding: 12px; border-bottom: 1px solid #eee; }
-    .btn-red { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 10px; width: 100%; font-weight: bold; cursor: pointer; margin-top: 10px; }
+    .btn-red { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 10px; width: 100%; font-weight: bold; cursor: pointer; }
   </style>
 </head>
 <body>
@@ -20,21 +20,18 @@
     <button onclick="location.href='app.html'" style="background:none; border:none; color:white; font-size:24px; cursor:pointer;">←</button>
     <span style="margin-left: 15px; font-weight: bold;">Meus Gastos</span>
   </header>
-
   <main class="container">
     <div class="card">
-      <h3 style="text-align:center;">Resumo de Gastos</h3>
-      <div style="position: relative; height: 250px;"><canvas id="myChart"></canvas></div>
+      <h3>Resumo de Gastos</h3>
+      <div style="height: 250px;"><canvas id="myChart"></canvas></div>
+      <div style="margin-top:10px; font-size: 22px; font-weight: bold; color: var(--primary);">Total: R$ <span id="totalAcumulado">0.00</span></div>
     </div>
-
-    <div class="card">
+    <div class="card" style="text-align: left;">
       <h3 style="color:var(--primary)">Últimas Compras</h3>
       <div id="listaHistorico">Buscando dados...</div>
     </div>
-    
     <button class="btn-red" onclick="location.href='app.html'">VOLTAR AO SCANNER</button>
   </main>
-
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js";
@@ -56,38 +53,51 @@
 
     onAuthStateChanged(auth, async (user) => {
       if (user) {
+        // AJUSTE AQUI: Lendo da pasta history padrão do seu app original
         const snap = await get(ref(db, `history/${user.uid}`));
         const lista = document.getElementById("listaHistorico");
+        
         if (snap.exists()) {
           const dados = snap.val();
           lista.innerHTML = "";
           let somaTotal = 0;
+          
+          // Transforma o objeto em array e inverte para mostrar a mais recente primeiro
           Object.values(dados).reverse().forEach(c => {
-            somaTotal += c.total;
+            const valor = parseFloat(c.total) || 0;
+            somaTotal += valor;
+            const dataFormatada = c.data ? new Date(c.data).toLocaleDateString('pt-BR') : '---';
+            
             lista.innerHTML += `<div class="history-item">
-                <span>${new Date(c.data).toLocaleDateString()}</span>
-                <span style="color:var(--primary); font-weight:bold;">R$ ${c.total.toFixed(2)}</span>
+                <span>${dataFormatada}</span>
+                <span style="font-weight:bold;">R$ ${valor.toFixed(2)}</span>
             </div>`;
           });
+          
+          document.getElementById("totalAcumulado").innerText = somaTotal.toFixed(2);
           gerarGrafico(somaTotal);
-        } else { lista.innerText = "Nenhuma compra finalizada."; gerarGrafico(0); }
-      } else { location.href = 'login.html'; }
+        } else { 
+          lista.innerText = "Nenhuma compra encontrada."; 
+          gerarGrafico(0); 
+        }
+      } else { 
+        location.href = 'login.html'; 
+      }
     });
 
     function gerarGrafico(total) {
-      const ctx = document.getElementById('myChart');
+      const ctx = document.getElementById('myChart').getContext('2d');
       new Chart(ctx, {
         type: 'doughnut',
         data: {
-          labels: ['Total Acumulado'],
+          labels: ['Gasto'],
           datasets: [{
-            data: [total || 1, 0.001], // Ajuste para o gráfico não sumir se for zero
-            backgroundColor: ['#d40000', '#eee'],
+            data: [total || 0.1, 0],
+            backgroundColor: ['#d40000', '#f0f0f0'],
             borderWidth: 0
           }]
         },
         options: {
-          maintainAspectRatio: false,
           cutout: '80%',
           plugins: { legend: { display: false } }
         }
