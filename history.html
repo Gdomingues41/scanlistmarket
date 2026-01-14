@@ -28,7 +28,7 @@
     </div>
     <div class="card" style="text-align: left;">
       <h3 style="color:var(--primary)">Últimas Compras</h3>
-      <div id="listaHistorico">Buscando dados...</div>
+      <div id="listaHistorico">Buscando compras...</div>
     </div>
     <button class="btn-red" onclick="location.href='app.html'">VOLTAR AO SCANNER</button>
   </main>
@@ -53,32 +53,41 @@
 
     onAuthStateChanged(auth, async (user) => {
       if (user) {
-        // AJUSTE AQUI: Lendo da pasta history padrão do seu app original
-        const snap = await get(ref(db, `history/${user.uid}`));
         const lista = document.getElementById("listaHistorico");
         
-        if (snap.exists()) {
-          const dados = snap.val();
-          lista.innerHTML = "";
-          let somaTotal = 0;
-          
-          // Transforma o objeto em array e inverte para mostrar a mais recente primeiro
-          Object.values(dados).reverse().forEach(c => {
-            const valor = parseFloat(c.total) || 0;
-            somaTotal += valor;
-            const dataFormatada = c.data ? new Date(c.data).toLocaleDateString('pt-BR') : '---';
+        // AJUSTE CRÍTICO: No seu app.html, a gravação é feita em users/ID/history
+        const path = `users/${user.uid}/history`;
+        
+        try {
+          const snap = await get(ref(db, path));
+
+          if (snap.exists()) {
+            const dadosCombinados = snap.val();
+            lista.innerHTML = "";
+            let somaTotal = 0;
             
-            lista.innerHTML += `<div class="history-item">
-                <span>${dataFormatada}</span>
-                <span style="font-weight:bold;">R$ ${valor.toFixed(2)}</span>
-            </div>`;
-          });
-          
-          document.getElementById("totalAcumulado").innerText = somaTotal.toFixed(2);
-          gerarGrafico(somaTotal);
-        } else { 
-          lista.innerText = "Nenhuma compra encontrada."; 
-          gerarGrafico(0); 
+            Object.values(dadosCombinados).reverse().forEach(c => {
+              const valor = parseFloat(c.total) || 0;
+              somaTotal += valor;
+              // Ajuste para aceitar tanto data em milissegundos quanto ISO String
+              const dataObj = isNaN(c.data) ? new Date(c.data) : new Date(parseInt(c.data));
+              const dataFormatada = dataObj.toLocaleDateString('pt-BR');
+              
+              lista.innerHTML += `<div class="history-item">
+                  <span>${dataFormatada}</span>
+                  <span style="font-weight:bold;">R$ ${valor.toFixed(2)}</span>
+              </div>`;
+            });
+            
+            document.getElementById("totalAcumulado").innerText = somaTotal.toFixed(2);
+            gerarGrafico(somaTotal);
+          } else {
+            lista.innerText = "Nenhuma compra finalizada encontrada.";
+            gerarGrafico(0);
+          }
+        } catch (err) {
+          lista.innerText = "Erro ao carregar dados.";
+          console.error(err);
         }
       } else { 
         location.href = 'login.html'; 
@@ -98,6 +107,7 @@
           }]
         },
         options: {
+          maintainAspectRatio: false,
           cutout: '80%',
           plugins: { legend: { display: false } }
         }
