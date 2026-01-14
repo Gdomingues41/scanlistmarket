@@ -109,7 +109,16 @@
     const auth = getAuth(app);
     const db = getDatabase(app);
     let userUID = null; let currentQty = 1; let lastCode = ""; let torchOn = false;
-    const html5QrCode = new Html5Qrcode("reader");
+    // Configuração otimizada para códigos de barras (EAN-13, EAN-8, etc)
+    const html5QrCode = new Html5Qrcode("reader", { 
+      formatsToSupport: [ 
+        Html5QrcodeSupportedFormats.EAN_13, 
+        Html5QrcodeSupportedFormats.EAN_8, 
+        Html5QrcodeSupportedFormats.CODE_128, 
+        Html5QrcodeSupportedFormats.QR_CODE 
+      ],
+      verbose: false 
+    });
 
     onAuthStateChanged(auth, (user) => {
       if (user) {
@@ -137,30 +146,56 @@
 
     document.getElementById("btnIniciarScan").onclick = () => {
       document.getElementById("scannerWrapper").style.display = "block";
+      
+      // Configurações específicas para melhorar a leitura no iOS/Safari
+      const config = { 
+        fps: 20, // Aumentado para maior fluidez
+        qrbox: { width: 280, height: 180 }, // Formato retangular melhor para códigos de barras
+        aspectRatio: 1.0,
+        experimentalFeatures: {
+          useBarCodeDetectorIfSupported: true // Tenta usar o detector nativo do sistema se disponível
+        }
+      };
+
       html5QrCode.start(
         { facingMode: "environment" }, 
-        { fps: 15, qrbox: 250 }, 
+        config, 
         (codigo) => {
+          // Feedback tátil (se suportado)
+          if (navigator.vibrate) navigator.vibrate(100);
+          
           html5QrCode.stop().then(() => { 
             document.getElementById("scannerWrapper").style.display = "none"; 
             buscarAPI(codigo); 
           });
         }
       ).then(() => {
-        // Correção: Acessar track de forma segura
+        // Tenta forçar o foco automático e configurar a lanterna
         setTimeout(() => {
           try {
             const video = document.querySelector("#reader video");
             if (video && video.srcObject) {
               const track = video.srcObject.getVideoTracks()[0];
+              
+              // Melhora o foco se as capacidades permitirem
               const capabilities = track.getCapabilities();
+              const constraints = {};
+              
+              if (capabilities.focusMode && capabilities.focusMode.includes('continuous')) {
+                constraints.focusMode = 'continuous';
+              }
+              
+              if (Object.keys(constraints).length > 0) {
+                track.applyConstraints({ advanced: [constraints] });
+              }
+
               document.getElementById("btnTorch").style.display = capabilities.torch ? "flex" : "none";
             }
-          } catch (e) { console.log("Lanterna não detectada"); }
+          } catch (e) { console.log("Ajustes de câmera não suportados"); }
         }, 1000);
       }).catch(err => {
         console.error("Erro ao iniciar scanner:", err);
-        alert("Erro ao acessar a câmera.");
+        alert("Erro ao acessar a câmera. Verifique as permissões do Safari.");
       });
     };
 
