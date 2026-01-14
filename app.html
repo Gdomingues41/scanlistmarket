@@ -180,18 +180,52 @@
       }
     };
 
-    async function buscarAPI(codigo) {
-      lastCode = codigo; currentQty = 1; document.getElementById("pQtdDisplay").innerText = "1";
-      document.getElementById("productCard").style.display = "block";
-      const local = await get(ref(db, `products/${codigo}`));
-      if(local.exists()){
-        document.getElementById("pNomeInput").value = local.val().nome;
-        document.getElementById("pImg").src = local.val().imagem || "";
+    // Lógica de Busca Manual
+    document.getElementById("btnBuscaManual").onclick = () => {
+      const codigo = document.getElementById("inputManualCode").value.trim();
+      if (codigo) {
+        buscarAPI(codigo);
       } else {
-        const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${codigo}?fields=product_name,image_url`);
-        const data = await res.json();
-        document.getElementById("pNomeInput").value = data.status === 1 ? data.product.product_name : "";
-        document.getElementById("pImg").src = data.status === 1 ? data.product.image_url : "";
+        alert("Por favor, digite um código de barras.");
+      }
+    };
+
+    async function buscarAPI(codigo) {
+      lastCode = codigo; 
+      currentQty = 1; 
+      document.getElementById("pQtdDisplay").innerText = "1";
+      document.getElementById("pPreco").value = ""; // Limpa o preço anterior
+      
+      // Mostra o card com estado de carregamento
+      document.getElementById("productCard").style.display = "block";
+      document.getElementById("pNomeInput").value = "Buscando...";
+      document.getElementById("pImg").src = "";
+
+      try {
+        // 1. Tenta buscar no banco local (Firebase)
+        const local = await get(ref(db, `products/${codigo}`));
+        if(local.exists()){
+          document.getElementById("pNomeInput").value = local.val().nome;
+          document.getElementById("pImg").src = local.val().imagem || "";
+        } else {
+          // 2. Tenta buscar na API do Open Food Facts
+          const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${codigo}?fields=product_name,image_url`);
+          const data = await res.json();
+          
+          if (data.status === 1 && data.product) {
+            document.getElementById("pNomeInput").value = data.product.product_name || "";
+            document.getElementById("pImg").src = data.product.image_url || "";
+          } else {
+            // 3. Se não encontrar, permite preenchimento manual
+            document.getElementById("pNomeInput").value = "";
+            document.getElementById("pNomeInput").placeholder = "Produto não encontrado. Digite o nome.";
+            alert("Produto não encontrado na base de dados. Você pode cadastrá-lo manualmente.");
+          }
+        }
+      } catch (error) {
+        console.error("Erro na busca:", error);
+        document.getElementById("pNomeInput").value = "";
+        alert("Erro ao buscar produto. Verifique sua conexão.");
       }
     }
 
