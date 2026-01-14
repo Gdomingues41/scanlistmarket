@@ -133,17 +133,48 @@
 
     document.getElementById("btnIniciarScan").onclick = () => {
       document.getElementById("scannerWrapper").style.display = "block";
-      html5QrCode.start({ facingMode: "environment" }, { fps: 15, qrbox: 250 }, (codigo) => {
-        html5QrCode.stop().then(() => { document.getElementById("scannerWrapper").style.display = "none"; buscarAPI(codigo); });
+      html5QrCode.start(
+        { facingMode: "environment" }, 
+        { fps: 15, qrbox: 250 }, 
+        (codigo) => {
+          html5QrCode.stop().then(() => { 
+            document.getElementById("scannerWrapper").style.display = "none"; 
+            buscarAPI(codigo); 
+          });
+        }
+      ).then(() => {
+        // Verifica se a lanterna é suportada após iniciar a câmera
+        const track = html5QrCode.getRunningTrack();
+        if (track) {
+          const capabilities = track.getCapabilities();
+          if (capabilities.torch) {
+            document.getElementById("btnTorch").style.display = "flex";
+          } else {
+            document.getElementById("btnTorch").style.display = "none";
+          }
+        }
+      }).catch(err => {
+        console.error("Erro ao iniciar scanner:", err);
+        alert("Erro ao acessar a câmera.");
       });
     };
 
     document.getElementById("btnTorch").onclick = async () => {
       try {
-        torchOn = !torchOn;
         const track = html5QrCode.getRunningTrack();
-        if(track) await track.applyConstraints({ advanced: [{ torch: torchOn }] });
-      } catch (e) { alert("Inicie a câmera antes de ligar a luz."); }
+        if (track) {
+          torchOn = !torchOn;
+          await track.applyConstraints({
+            advanced: [{ torch: torchOn }]
+          });
+          document.getElementById("btnTorch").innerText = torchOn ? "🔦 ON" : "🔦 OFF";
+        } else {
+          alert("A câmera precisa estar ativa para usar a lanterna.");
+        }
+      } catch (e) {
+        console.error("Erro ao alternar lanterna:", e);
+        alert("Lanterna não suportada neste dispositivo/navegador.");
+      }
     };
 
     async function buscarAPI(codigo) {
@@ -196,32 +227,94 @@
 
     document.getElementById("btnFinalizarDefinitivo").onclick = async () => {
       const tVal = parseFloat(document.getElementById("totalGeral").innerText);
-      if(tVal <= 0) return alert("Carrinho vazio!");
-      if(confirm("Finalizar e salvar no histórico?")) {
-        await push(ref(db, `history/${userUID}`), { data: Date.now(), total: tVal });
-        await remove(ref(db, `users/${userUID}/items`));
-        await update(ref(db, 'users/' + userUID), { totalCart: 0 });
-        location.href = "history.html";
+      if(tVal <= 0) return alert("Seu carrinho está vazio!");
+      
+      if(confirm("Deseja finalizar esta compra e salvar no histórico?")) {
+        try {
+          // Busca os itens atuais para salvar no histórico detalhado
+          const itemsSnap = await get(ref(db, `users/${userUID}/items`));
+          const items = itemsSnap.exists() ? itemsSnap.val() : {};
+          
+          // Salva no histórico global do usuário
+          const historicoRef = push(ref(db, `history/${userUID}`));
+          await set(historicoRef, {
+            data: new Date().toISOString(),
+            total: tVal,
+            itens: items
+          });
+
+          // Limpa os dados do carrinho no Firebase
+          await remove(ref(db, `users/${userUID}/items`));
+          await update(ref(db, 'users/' + userUID), { totalCart: 0 });
+
+          // Feedback e reinicialização
+          alert("Compra finalizada com sucesso!");
+          document.getElementById("modalCarrinho").style.display = "none";
+          document.getElementById("totalGeral").innerText = "0.00";
+          document.getElementById("cartCount").innerText = "0";
+          
+          // Opcional: Redirecionar ou apenas limpar a tela atual
+          if(confirm("Deseja ver seu histórico agora?")) {
+            location.href = "history.html";
+          } else {
+            // Apenas limpa a interface para uma nova compra
+            document.getElementById("listaItensCarrinho").innerHTML = "Vazio";
+          }
+        } catch (error) {
+          console.error("Erro ao finalizar compra:", error);
+          alert("Erro ao finalizar compra. Tente novamente.");
+        }
       }
     };
 
     // TOUR DINÂMICO
     const tourSteps = [
-      { element: "btnIniciarScan", title: "Câmera", desc: "Escaneie o código de barras." },
-      { element: "step-total", title: "Gasto", desc: "Acompanhe seu total aqui." },
-      { element: "btnSettings", title: "Configurações", desc: "Ajuste seu perfil aqui." }
+      { element: null, title: "Bem-vindo!", desc: "Vamos te mostrar como usar o Scanlist Market para facilitar suas compras." },
+      { element: "btnIniciarScan", title: "Escanear Produto", desc: "Clique aqui para abrir a câmera e ler o código de barras do produto." },
+      { element: "step-manual", title: "Busca Manual", desc: "Se o código estiver ruim, você pode digitar os números aqui." },
+      { element: "btnVerCarrinho", title: "Seu Carrinho", desc: "Aqui você vê todos os itens adicionados e pode finalizar sua compra." },
+      { element: "step-total", title: "Total Acumulado", desc: "Acompanhe em tempo real quanto está gastando nesta compra." },
+      { element: "step-history", title: "Histórico", desc: "Veja suas compras passadas e controle seus gastos mensais." },
+      { element: null, title: "Tudo Pronto!", desc: "Agora você já pode começar suas compras de forma inteligente!" }
     ];
     let currentStep = 0;
     function showStep() {
       const step = tourSteps[currentStep];
+      // Remove destaques anteriores
       document.querySelectorAll('.tour-highlight').forEach(el => el.classList.remove('tour-highlight'));
-      if (step.element) document.getElementById(step.element).classList.add("tour-highlight");
+      
+      if (step.element) {
+        const el = document.getElementById(step.element);
+        if (el) {
+          el.classList.add("tour-highlight");
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }
+      
       document.getElementById("tourTitle").innerText = step.title;
       document.getElementById("tourDesc").innerText = step.desc;
+      document.getElementById("btnTourNext").innerText = currentStep === tourSteps.length - 1 ? "COMEÇAR" : "PRÓXIMO";
     }
+
     document.getElementById("btnTourNext").onclick = () => {
-      currentStep++; if(currentStep < tourSteps.length) showStep();
-      else { document.getElementById("tourOverlay").style.display = "none"; localStorage.setItem("tourVisto", "true"); }
+      currentStep++; 
+      if(currentStep < tourSteps.length) {
+        showStep();
+      } else {
+        document.getElementById("tourOverlay").style.display = "none";
+        document.querySelectorAll('.tour-highlight').forEach(el => el.classList.remove('tour-highlight'));
+        localStorage.setItem("tourVisto", "true");
+      }
+    };
+
+    // Permitir reiniciar o tour pelas configurações
+    document.getElementById("btnSettings").onclick = () => {
+      if(confirm("Deseja ver o tutorial novamente?")) {
+        localStorage.removeItem("tourVisto");
+        currentStep = 0;
+        document.getElementById("tourOverlay").style.display = "flex";
+        showStep();
+      }
     };
   </script>
 </body>
