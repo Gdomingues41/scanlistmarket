@@ -4,22 +4,15 @@
   <meta charset="UTF-8">
   <title>Scanlist Market - Carrinho</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#d40000">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="apple-touch-icon" href="logo-white.png">
-
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
   <style>
-    :root { 
-      --primary: #d40000; 
-      --success: #28a745; 
-      --gray-light: #f8f9fa;
-      --shadow: 0 4px 12px rgba(0,0,0,0.1);
-    }
-    body { font-family: -apple-system, system-ui, sans-serif; margin: 0; background: var(--gray-light); padding-bottom: 80px; }
+    :root { --primary: #d40000; --success: #28a745; --gray-light: #f8f9fa; --shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    body { font-family: -apple-system, system-ui, sans-serif; margin: 0; background: var(--gray-light); padding-bottom: 80px; overflow-x: hidden; }
     
     .header { background: var(--primary); color: white; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
     .header-info { display: flex; align-items: center; gap: 12px; }
@@ -30,13 +23,8 @@
     .scanner-wrapper { position: relative; width: 100%; display: none; margin-bottom: 20px; }
     #reader { width: 100%; border-radius: 16px; overflow: hidden; background: #000; box-shadow: var(--shadow); border: 2px solid var(--primary); }
     
-    .torch-btn {
-      position: absolute; bottom: 15px; right: 15px; width: 45px; height: 45px;
-      background: rgba(255, 255, 255, 0.9); border-radius: 50%; border: none;
-      font-size: 20px; display: flex; align-items: center; justify-content: center;
-      z-index: 110; box-shadow: 0 4px 10px rgba(0,0,0,0.3); cursor: pointer;
-    }
-
+    .torch-btn { position: absolute; bottom: 15px; right: 15px; width: 45px; height: 45px; background: rgba(255, 255, 255, 0.9); border-radius: 50%; border: none; font-size: 20px; display: flex; align-items: center; justify-content: center; z-index: 110; box-shadow: 0 4px 10px rgba(0,0,0,0.3); cursor: pointer; }
+    
     .product-card { background: white; padding: 25px; border-radius: 16px; display: none; box-shadow: 0 10px 25px rgba(0,0,0,0.15); margin-top: 20px; }
     .product-img-container { width: 120px; height: 120px; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center; background: #fff; border-radius: 12px; border: 1px solid #eee; }
     .product-img { max-width: 100%; max-height: 100%; object-fit: contain; }
@@ -45,16 +33,18 @@
     .qty-btn { background: white; border: none; width: 45px; height: 45px; border-radius: 50%; font-size: 24px; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.1); cursor: pointer; }
     
     input { width: 100%; padding: 14px; border: 2px solid #eee; border-radius: 10px; box-sizing: border-box; font-size: 16px; text-align: center; margin-bottom: 10px; }
-    .btn { background: var(--primary); color: white; border: none; padding: 16px; border-radius: 10px; cursor: pointer; font-weight: bold; width: 100%; font-size: 16px; transition: opacity 0.2s; }
+    .btn { background: var(--primary); color: white; border: none; padding: 16px; border-radius: 10px; cursor: pointer; font-weight: bold; width: 100%; font-size: 16px; transition: all 0.2s; }
     
     .cart-container { position: relative; cursor: pointer; font-size: 30px; }
     .cart-badge { position: absolute; top: -5px; right: -8px; background: white; color: var(--primary); border: 2px solid var(--primary); border-radius: 50%; width: 22px; height: 22px; font-size: 11px; font-weight: bold; display: none; align-items: center; justify-content: center; }
     
     .cart-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 200; overflow-y: auto; padding: 20px; box-sizing: border-box; }
     .cart-item { display: flex; justify-content: space-between; align-items: center; padding: 15px; border-bottom: 1px solid #eee; text-align: left; }
-    
-    .tour-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 2000; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 30px; color: white; text-align: center; }
-    .tour-card { background: white; color: #333; padding: 25px; border-radius: 20px; max-width: 320px; width: 100%; }
+
+    /* ESTILO DO TOUR DINÂMICO */
+    .tour-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 2000; display: none; align-items: flex-end; justify-content: center; padding-bottom: 50px; }
+    .tour-card { background: white; color: #333; padding: 20px; border-radius: 20px; max-width: 320px; width: 90%; text-align: center; box-shadow: 0 -5px 20px rgba(0,0,0,0.3); }
+    .tour-highlight { z-index: 2001 !important; position: relative; box-shadow: 0 0 0 9999px rgba(0,0,0,0.7), 0 0 15px 5px white !important; pointer-events: none; border-radius: 10px; }
 
     .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
     .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; }
@@ -63,36 +53,30 @@
 </head>
 <body>
   <div id="tourOverlay" class="tour-overlay">
-    <div class="tour-card">
-      <h2 id="tourTitle" style="color:var(--primary)">Bem-vindo!</h2>
-      <p id="tourDesc">Vamos te mostrar como economizar agora mesmo.</p>
-      <button class="btn" id="btnTourNext">PRÓXIMO</button>
+    <div class="tour-card" id="tourCard">
+      <h3 id="tourTitle" style="color:var(--primary); margin:0 0 10px 0;"></h3>
+      <p id="tourDesc" style="margin:0 0 15px 0; font-size:14px;"></p>
+      <button class="btn" id="btnTourNext" style="padding:10px;">PRÓXIMO</button>
     </div>
   </div>
 
   <div id="loading" class="loading-overlay"><div class="spinner"></div><p>Buscando produto...</p></div>
 
   <header class="header">
-    <div class="header-info">
-        <img src="logo-white.png" class="header-logo" alt="Logo">
-        <div><small style="font-size: 10px;">BEM-VINDO,</small><br><span id="userNameDisplay" style="font-weight: bold;">...</span></div>
-    </div>
+    <div class="header-info"><img src="logo-white.png" class="header-logo" alt="Logo"><div><small style="font-size: 10px;">BEM-VINDO,</small><br><span id="userNameDisplay" style="font-weight: bold;">...</span></div></div>
     <div style="display: flex; gap: 15px; align-items: center;">
-      <button onclick="location.href='history.html'" style="background:none; border:none; font-size:24px; cursor:pointer;" title="Ver Gastos">📊</button>
+      <button id="step-history" onclick="location.href='history.html'" style="background:none; border:none; font-size:24px; cursor:pointer;">📊</button>
       <div class="cart-container" id="btnVerCarrinho">🛒<span class="cart-badge" id="cartCount">0</span></div>
       <button onclick="confirm('Sair da conta?') && location.replace('login.html')" style="background:none; border:none; font-size:22px; cursor:pointer;">🚪</button>
     </div>
   </header>
 
   <main class="container">
-    <div class="scanner-wrapper" id="scannerWrapper">
-        <div id="reader"></div>
-        <button class="torch-btn" id="btnTorch">🔦</button>
-    </div>
-
+    <div class="scanner-wrapper" id="scannerWrapper"><div id="reader"></div><button class="torch-btn" id="btnTorch">🔦</button></div>
+    
     <button class="btn" id="btnIniciarScan">📷 ESCANEAR PRODUTO</button>
 
-    <div style="margin-top:20px; background:white; padding:20px; border-radius:16px; border:1px solid #ddd;">
+    <div id="step-manual" style="margin-top:20px; background:white; padding:20px; border-radius:16px; border:1px solid #ddd;">
         <input type="text" id="inputManualCode" placeholder="OU DIGITE O CÓDIGO" inputmode="numeric">
         <button class="btn" id="btnBuscaManual">BUSCAR MANUALMENTE</button>
     </div>
@@ -101,16 +85,12 @@
       <div class="product-img-container"><img id="pImg" src="" class="product-img"></div>
       <input type="text" id="pNomeInput" placeholder="Nome do Produto">
       <input type="number" id="pPreco" placeholder="Preço R$" step="0.01" inputmode="decimal">
-      <div class="qty-box">
-        <button class="qty-btn" id="btnMinus">−</button>
-        <span id="pQtdDisplay">1</span>
-        <button class="qty-btn" id="btnPlus">+</button>
-      </div>
+      <div class="qty-box"><button class="qty-btn" id="btnMinus">−</button><span id="pQtdDisplay">1</span><button class="qty-btn" id="btnPlus">+</button></div>
       <button class="btn" id="btnConfirmar" style="background:var(--success)">ADICIONAR AO CARRINHO</button>
       <button class="btn" style="background:#666; margin-top:10px;" onclick="document.getElementById('productCard').style.display='none'">CANCELAR</button>
     </div>
 
-    <div style="background:white; padding:15px; border-radius:16px; margin-top:20px; border-top:5px solid var(--primary); box-shadow: var(--shadow);">
+    <div id="step-total" style="background:white; padding:15px; border-radius:16px; margin-top:20px; border-top:5px solid var(--primary); box-shadow: var(--shadow);">
       <small style="font-weight: bold; color: #666;">TOTAL NO CARRINHO</small>
       <div style="font-size: 32px; font-weight: 800; color: var(--primary);">R$ <span id="totalGeral">0.00</span></div>
     </div>
@@ -133,7 +113,6 @@
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js";
     import { getDatabase, ref, onValue, update, push, get, remove, set } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-database.js";
 
-    // --- CONFIGURAÇÃO REAL DO TEU PROJETO ---
     const firebaseConfig = {
       apiKey: "AIzaSyCtke_2T3e0HDDMqJsfJsRGs5KcKtN3Xe8",
       authDomain: "scanlistmarket-30143.firebaseapp.com",
@@ -150,22 +129,35 @@
     let userUID = null;
     let currentQty = 1;
     let lastCode = "";
-
+    let torchOn = false;
     const html5QrCode = new Html5Qrcode("reader");
 
     const tourSteps = [
-      { title: "Escaneie tudo!", desc: "Clique no botão de câmera para ler o código de barras." },
-      { title: "Memória Inteligente", desc: "Se o nome vier errado, edite-o. O app aprenderá!" },
-      { title: "Use a Lanterna", desc: "Em locais escuros, use o botão 🔦 no scanner." },
-      { title: "Instale o App", desc: "Adicione à tela de início para acesso rápido!" }
+      { element: "btnIniciarScan", title: "Câmera Inteligente", desc: "Clique aqui para escanear o código de barras dos produtos." },
+      { element: "step-manual", title: "Busca Manual", desc: "Se o código estiver ruim, digite os números aqui." },
+      { element: "step-total", title: "Controle em Tempo Real", desc: "Aqui você vê o total antes de chegar no caixa." },
+      { element: "step-history", title: "Seu Histórico", desc: "Acompanhe seus gastos clicando no ícone de gráfico." },
+      { element: null, title: "Dica Final!", desc: "Instale o app na tela inicial para usar a lanterna e ter acesso rápido!" }
     ];
     let currentStep = 0;
+
+    function showStep() {
+      const step = tourSteps[currentStep];
+      document.querySelectorAll('.tour-highlight').forEach(el => el.classList.remove('tour-highlight'));
+      if (step.element) {
+        document.getElementById(step.element).classList.add("tour-highlight");
+      }
+      document.getElementById("tourTitle").innerText = step.title;
+      document.getElementById("tourDesc").innerText = step.desc;
+    }
 
     onAuthStateChanged(auth, (user) => {
       if (user) {
         userUID = user.uid;
-        if(!localStorage.getItem("tourVisto")) document.getElementById("tourOverlay").style.display = "flex";
-        
+        if(!localStorage.getItem("tourVisto")) {
+            document.getElementById("tourOverlay").style.display = "flex";
+            showStep();
+        }
         onValue(ref(db, 'users/' + userUID), (snap) => {
           if (snap.exists()) {
             document.getElementById("userNameDisplay").innerText = snap.val().username;
@@ -182,11 +174,10 @@
 
     document.getElementById("btnTourNext").onclick = () => {
       currentStep++;
-      if(currentStep < tourSteps.length) {
-        document.getElementById("tourTitle").innerText = tourSteps[currentStep].title;
-        document.getElementById("tourDesc").innerText = tourSteps[currentStep].desc;
-      } else {
+      if(currentStep < tourSteps.length) { showStep(); } 
+      else {
         document.getElementById("tourOverlay").style.display = "none";
+        document.querySelectorAll('.tour-highlight').forEach(el => el.classList.remove('tour-highlight'));
         localStorage.setItem("tourVisto", "true");
       }
     };
@@ -199,6 +190,17 @@
           buscarAPI(codigo);
         });
       });
+    };
+
+    document.getElementById("btnTorch").onclick = async () => {
+      try {
+        torchOn = !torchOn;
+        const track = html5QrCode.getRunningTrack();
+        if(track) {
+          await track.applyConstraints({ advanced: [{ torch: torchOn }] });
+          document.getElementById("btnTorch").innerText = torchOn ? "🚫🔦" : "🔦";
+        }
+      } catch (e) { alert("A câmera precisa estar aberta para ligar a lanterna."); }
     };
 
     document.getElementById("btnBuscaManual").onclick = () => {
@@ -235,13 +237,11 @@
       await update(ref(db, 'users/' + userUID), { totalCart: (snap.val().totalCart || 0) + sub });
       document.getElementById("productCard").style.display = "none";
       document.getElementById("pPreco").value = "";
-      currentQty = 1;
-      document.getElementById("pQtdDisplay").innerText = "1";
+      currentQty = 1; document.getElementById("pQtdDisplay").innerText = "1";
     };
 
     document.getElementById("btnPlus").onclick = () => { currentQty++; document.getElementById("pQtdDisplay").innerText = currentQty; };
     document.getElementById("btnMinus").onclick = () => { if(currentQty > 1) { currentQty--; document.getElementById("pQtdDisplay").innerText = currentQty; } };
-
     document.getElementById("btnVerCarrinho").onclick = carregarCarrinho;
     
     async function carregarCarrinho() {
@@ -251,19 +251,16 @@
       const snap = await get(ref(db, `users/${userUID}/items`));
       lista.innerHTML = snap.exists() ? "" : "<p style='text-align:center;'>Vazio</p>";
       snap.forEach(item => {
-        lista.innerHTML += `<div class="cart-item">
-          <div><strong>${item.val().nome}</strong><br><small>${item.val().qtd}x R$ ${item.val().preco.toFixed(2)}</small></div>
-          <div style="display:flex; align-items:center; gap:10px;">R$ ${item.val().subtotal.toFixed(2)}</div>
-        </div>`;
+        lista.innerHTML += `<div class="cart-item"><div><strong>${item.val().nome}</strong><br><small>${item.val().qtd}x R$ ${item.val().preco.toFixed(2)}</small></div><div>R$ ${item.val().subtotal.toFixed(2)}</div></div>`;
       });
     }
 
     document.getElementById("btnFinalizarCompra").onclick = async () => {
       const snap = await get(ref(db, 'users/' + userUID));
       const total = snap.val().totalCart || 0;
-      if(total === 0) return alert("Vazio!");
+      if(total === 0) return alert("Adicione itens antes de finalizar!");
       if(confirm("Finalizar e salvar no histórico?")) {
-        await push(ref(db, `history/${userUID}`), { data: Date.now(), total });
+        await push(ref(db, `history/${userUID}`), { data: Date.now(), total: total });
         await remove(ref(db, `users/${userUID}/items`));
         await update(ref(db, 'users/' + userUID), { totalCart: 0 });
         location.href = 'history.html';
