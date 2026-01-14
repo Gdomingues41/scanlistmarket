@@ -100,6 +100,7 @@
     const auth = getAuth(app);
     const db = getDatabase(app);
     let userUID = null; let currentQty = 1; let lastCode = ""; let torchOn = false;
+    let scannerIniciado = false;
     const html5QrCode = new Html5Qrcode("reader");
 
     const tourSteps = [
@@ -144,12 +145,18 @@
 
     document.getElementById("btnIniciarScan").onclick = () => {
       document.getElementById("scannerWrapper").style.display = "block";
+      scannerIniciado = true;
       html5QrCode.start({ facingMode: "environment" }, { fps: 20, qrbox: 250 }, (codigo) => {
-        html5QrCode.stop().then(() => { document.getElementById("scannerWrapper").style.display = "none"; buscarAPI(codigo); });
-      });
+        html5QrCode.stop().then(() => { 
+          document.getElementById("scannerWrapper").style.display = "none"; 
+          scannerIniciado = false;
+          buscarAPI(codigo); 
+        });
+      }).catch(() => { scannerIniciado = false; });
     };
 
     document.getElementById("btnTorch").onclick = async () => {
+      if(!scannerIniciado) return alert("Abra a câmera primeiro!");
       try {
         torchOn = !torchOn;
         const track = html5QrCode.getRunningTrack();
@@ -157,7 +164,7 @@
           await track.applyConstraints({ advanced: [{ torch: torchOn }] });
           document.getElementById("btnTorch").innerText = torchOn ? "🚫🔦" : "🔦";
         }
-      } catch (e) { alert("Inicie a câmera antes de ligar a lanterna."); }
+      } catch (e) { alert("Sua câmera não suporta lanterna via navegador."); }
     };
 
     document.getElementById("btnBuscaManual").onclick = () => {
@@ -195,8 +202,6 @@
       document.getElementById("pPreco").value = ""; currentQty = 1; document.getElementById("pQtdDisplay").innerText = "1";
     };
 
-    document.getElementById("btnPlus").onclick = () => { currentQty++; document.getElementById("pQtdDisplay").innerText = currentQty; };
-    document.getElementById("btnMinus").onclick = () => { if(currentQty > 1) { currentQty--; document.getElementById("pQtdDisplay").innerText = currentQty; } };
     document.getElementById("btnVerCarrinho").onclick = carregarCarrinho;
     
     async function carregarCarrinho() {
@@ -209,29 +214,30 @@
         lista.innerHTML += `<div class="cart-item">
           <div><strong>${item.val().nome}</strong><br><small>${item.val().qtd}x R$ ${item.val().preco.toFixed(2)}</small></div>
           <div style="display:flex; align-items:center; gap:10px;">R$ ${item.val().subtotal.toFixed(2)} 
-          <button onclick="window.removerItem('${item.key}', ${item.val().subtotal})" style="border:none; background:none; cursor:pointer; font-size:18px;">🗑️</button></div>
+          <button onclick="removerItem('${item.key}', ${item.val().subtotal})" style="border:none; background:none; cursor:pointer;">🗑️</button></div>
         </div>`;
       });
     }
 
     window.removerItem = async (key, subtotal) => {
-      if(confirm("Remover item?")) {
-        const snap = await get(ref(db, 'users/' + userUID));
-        await remove(ref(db, `users/${userUID}/items/${key}`));
-        await update(ref(db, 'users/' + userUID), { totalCart: (snap.val().totalCart || 0) - subtotal });
-        carregarCarrinho();
-      }
+      const snap = await get(ref(db, 'users/' + userUID));
+      await remove(ref(db, `users/${userUID}/items/${key}`));
+      await update(ref(db, 'users/' + userUID), { totalCart: (snap.val().totalCart || 0) - subtotal });
+      carregarCarrinho();
     };
 
     document.getElementById("btnFinalizarCompra").onclick = async () => {
-      const snap = await get(ref(db, 'users/' + userUID));
-      const totalValue = snap.val() ? (snap.val().totalCart || 0) : 0;
-      if(totalValue === 0) return alert("Carrinho vazio!");
+      const totalStr = document.getElementById("totalGeral").innerText;
+      const totalNum = parseFloat(totalStr);
+      if(totalNum <= 0) return alert("Carrinho vazio!");
       if(confirm("Finalizar e salvar no histórico?")) {
-        await push(ref(db, `history/${userUID}`), { data: Date.now(), total: totalValue });
-        await remove(ref(db, `users/${userUID}/items`));
-        await update(ref(db, 'users/' + userUID), { totalCart: 0 });
-        location.href = 'history.html';
+        try {
+          await push(ref(db, `history/${userUID}`), { data: Date.now(), total: totalNum });
+          await remove(ref(db, `users/${userUID}/items`));
+          await update(ref(db, 'users/' + userUID), { totalCart: 0 });
+          alert("Compra salva com sucesso!");
+          location.href = 'history.html';
+        } catch(e) { alert("Erro ao salvar. Tente novamente."); }
       }
     };
   </script>
