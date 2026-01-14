@@ -121,8 +121,12 @@
             document.getElementById("totalGeral").innerText = (snap.val().totalCart || 0).toFixed(2);
           }
         });
+        // Correção da Badge: Contar itens corretamente
         onValue(ref(db, `users/${userUID}/items`), (snap) => {
-          document.getElementById("cartCount").innerText = snap.size || 0;
+          const count = snap.exists() ? Object.keys(snap.val()).length : 0;
+          const badge = document.getElementById("cartCount");
+          badge.innerText = count;
+          badge.style.display = count > 0 ? "flex" : "none";
         });
       } else { window.location.href = "login.html"; }
     });
@@ -143,16 +147,17 @@
           });
         }
       ).then(() => {
-        // Verifica se a lanterna é suportada após iniciar a câmera
-        const track = html5QrCode.getRunningTrack();
-        if (track) {
-          const capabilities = track.getCapabilities();
-          if (capabilities.torch) {
-            document.getElementById("btnTorch").style.display = "flex";
-          } else {
-            document.getElementById("btnTorch").style.display = "none";
-          }
-        }
+        // Correção: Acessar track de forma segura
+        setTimeout(() => {
+          try {
+            const video = document.querySelector("#reader video");
+            if (video && video.srcObject) {
+              const track = video.srcObject.getVideoTracks()[0];
+              const capabilities = track.getCapabilities();
+              document.getElementById("btnTorch").style.display = capabilities.torch ? "flex" : "none";
+            }
+          } catch (e) { console.log("Lanterna não detectada"); }
+        }, 1000);
       }).catch(err => {
         console.error("Erro ao iniciar scanner:", err);
         alert("Erro ao acessar a câmera.");
@@ -161,19 +166,17 @@
 
     document.getElementById("btnTorch").onclick = async () => {
       try {
-        const track = html5QrCode.getRunningTrack();
+        const video = document.querySelector("#reader video");
+        const track = video ? video.srcObject.getVideoTracks()[0] : null;
         if (track) {
           torchOn = !torchOn;
-          await track.applyConstraints({
-            advanced: [{ torch: torchOn }]
-          });
+          await track.applyConstraints({ advanced: [{ torch: torchOn }] });
           document.getElementById("btnTorch").innerText = torchOn ? "🔦 ON" : "🔦 OFF";
         } else {
-          alert("A câmera precisa estar ativa para usar a lanterna.");
+          alert("A câmera precisa estar ativa.");
         }
       } catch (e) {
-        console.error("Erro ao alternar lanterna:", e);
-        alert("Lanterna não suportada neste dispositivo/navegador.");
+        alert("Erro ao usar lanterna.");
       }
     };
 
@@ -231,38 +234,34 @@
       
       if(confirm("Deseja finalizar esta compra e salvar no histórico?")) {
         try {
-          // Busca os itens atuais para salvar no histórico detalhado
+          // Busca os itens atuais
           const itemsSnap = await get(ref(db, `users/${userUID}/items`));
           const items = itemsSnap.exists() ? itemsSnap.val() : {};
           
-          // Salva no histórico global do usuário
-          const historicoRef = push(ref(db, `history/${userUID}`));
+          // Salva no histórico DENTRO da pasta do usuário para evitar erro de permissão
+          // Se o seu Firebase estiver configurado para apenas o usuário ler/escrever seus dados
+          const historicoRef = push(ref(db, `users/${userUID}/history`));
           await set(historicoRef, {
             data: new Date().toISOString(),
             total: tVal,
             itens: items
           });
 
-          // Limpa os dados do carrinho no Firebase
+          // Limpa os dados do carrinho
           await remove(ref(db, `users/${userUID}/items`));
           await update(ref(db, 'users/' + userUID), { totalCart: 0 });
 
-          // Feedback e reinicialização
           alert("Compra finalizada com sucesso!");
           document.getElementById("modalCarrinho").style.display = "none";
-          document.getElementById("totalGeral").innerText = "0.00";
-          document.getElementById("cartCount").innerText = "0";
           
-          // Opcional: Redirecionar ou apenas limpar a tela atual
           if(confirm("Deseja ver seu histórico agora?")) {
             location.href = "history.html";
           } else {
-            // Apenas limpa a interface para uma nova compra
             document.getElementById("listaItensCarrinho").innerHTML = "Vazio";
           }
         } catch (error) {
           console.error("Erro ao finalizar compra:", error);
-          alert("Erro ao finalizar compra. Tente novamente.");
+          alert("Erro de permissão no Firebase. Verifique as regras do banco de dados.");
         }
       }
     };
