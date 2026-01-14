@@ -1,0 +1,22 @@
+{
+  "name": "Scanlist Market",
+  "short_name": "Scanlist",
+  "description": "Seu carrinho de compras inteligente com memória e histórico.",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#d40000",
+  "theme_color": "#d40000",
+  "icons": [
+    {
+      "src": "logo-white.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "logo-white.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

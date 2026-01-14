@@ -4,338 +4,136 @@
   <meta charset="UTF-8">
   <title>Scanlist Market - Carrinho</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#d40000">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="apple-touch-icon" href="logo-white.png">
+
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
   <style>
     :root { 
       --primary: #d40000; 
-      --primary-dark: #a30000;
       --success: #28a745; 
       --gray-light: #f8f9fa;
-      --gray: #e9ecef;
-      --text-dark: #333;
       --shadow: 0 4px 12px rgba(0,0,0,0.1);
     }
+    body { font-family: -apple-system, system-ui, sans-serif; margin: 0; background: var(--gray-light); padding-bottom: 80px; }
     
-    body { 
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
-      margin: 0; 
-      background: var(--gray-light); 
-      color: var(--text-dark);
-      padding-bottom: 80px; 
-      -webkit-font-smoothing: antialiased;
-    }
-    
-    .header { 
-      background: var(--primary); 
-      color: white; 
-      padding: 12px 20px; 
-      display: flex; 
-      justify-content: space-between; 
-      align-items: center; 
-      position: sticky; 
-      top: 0; 
-      z-index: 100; 
-      box-shadow: 0 2px 8px rgba(0,0,0,0.2); 
-    }
-    
+    .header { background: var(--primary); color: white; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
     .header-info { display: flex; align-items: center; gap: 12px; }
-    .header-logo { height: 35px; border-radius: 4px; }
+    .header-logo { height: 35px; }
     
     .container { padding: 20px; text-align: center; max-width: 500px; margin: 0 auto; }
     
-    #reader { 
-      width: 100%; 
-      border-radius: 16px; 
-      overflow: hidden;
-      display: none; 
-      background: #000; 
-      margin-bottom: 20px;
-      box-shadow: var(--shadow);
-    }
+    .scanner-wrapper { position: relative; width: 100%; display: none; margin-bottom: 20px; }
+    #reader { width: 100%; border-radius: 16px; overflow: hidden; background: #000; box-shadow: var(--shadow); border: 2px solid var(--primary); }
     
-    /* Ajuste para vídeo no iOS */
-    #reader video {
-      object-fit: cover !important;
+    .torch-btn {
+      position: absolute; bottom: 15px; right: 15px; width: 45px; height: 45px;
+      background: rgba(255, 255, 255, 0.9); border-radius: 50%; border: none;
+      font-size: 20px; display: flex; align-items: center; justify-content: center;
+      z-index: 110; box-shadow: 0 4px 10px rgba(0,0,0,0.3); cursor: pointer;
     }
-    
-    .product-card { 
-      background: white; 
-      padding: 25px; 
-      border-radius: 16px; 
-      display: none; 
-      box-shadow: 0 10px 25px rgba(0,0,0,0.15); 
-      margin-top: 20px;
-      animation: slideUp 0.3s ease-out;
-    }
-    
-    @keyframes slideUp {
-      from { transform: translateY(20px); opacity: 0; }
-      to { transform: translateY(0); opacity: 1; }
-    }
-    
-    .product-img-container {
-      width: 150px;
-      height: 150px;
-      margin: 0 auto 15px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: #fdfdfd;
-      border-radius: 12px;
-      border: 1px solid #eee;
-    }
-    
+
+    .product-card { background: white; padding: 25px; border-radius: 16px; display: none; box-shadow: 0 10px 25px rgba(0,0,0,0.15); margin-top: 20px; }
+    .product-img-container { width: 120px; height: 120px; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center; background: #fff; border-radius: 12px; border: 1px solid #eee; }
     .product-img { max-width: 100%; max-height: 100%; object-fit: contain; }
     
-    .qty-box { 
-      display: flex; 
-      align-items: center; 
-      justify-content: center; 
-      gap: 20px; 
-      margin: 20px 0; 
-      background: #f0f0f0;
-      padding: 10px;
-      border-radius: 50px;
-    }
+    .qty-box { display: flex; align-items: center; justify-content: center; gap: 20px; margin: 20px 0; background: #f0f0f0; padding: 10px; border-radius: 50px; }
+    .qty-btn { background: white; border: none; width: 45px; height: 45px; border-radius: 50%; font-size: 24px; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.1); cursor: pointer; }
     
-    .qty-btn { 
-      background: white; 
-      border: none; 
-      width: 45px; 
-      height: 45px; 
-      border-radius: 50%; 
-      font-size: 24px; 
-      font-weight: bold; 
-      cursor: pointer; 
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: transform 0.1s;
-    }
-    
-    .qty-btn:active { transform: scale(0.9); }
-    
-    #pQtdDisplay { font-size: 22px; font-weight: bold; min-width: 30px; }
-    
-    .input-group { text-align: left; margin-bottom: 15px; }
-    .input-group label { display: block; font-size: 12px; color: #666; margin-bottom: 5px; font-weight: 600; }
-    
-    input { 
-      width: 100%; 
-      padding: 14px; 
-      border: 2px solid #eee; 
-      border-radius: 10px; 
-      box-sizing: border-box; 
-      font-size: 16px; 
-      transition: border-color 0.3s;
-      -webkit-appearance: none;
-    }
-    
-    input:focus { border-color: var(--primary); outline: none; }
-    
-    .btn { 
-      background: var(--primary); 
-      color: white; 
-      border: none; 
-      padding: 16px; 
-      border-radius: 10px; 
-      cursor: pointer; 
-      font-weight: bold; 
-      width: 100%; 
-      font-size: 16px; 
-      transition: background 0.3s, transform 0.1s;
-      box-shadow: 0 4px 6px rgba(212, 0, 0, 0.2);
-      -webkit-tap-highlight-color: transparent;
-    }
-    
-    .btn:active { transform: translateY(2px); }
-    .btn:hover { background: var(--primary-dark); }
-    
-    .manual-box { 
-      background: white; 
-      padding: 20px; 
-      border-radius: 16px; 
-      margin-top: 20px; 
-      border: 1px solid #ddd;
-      box-shadow: var(--shadow);
-    }
+    input { width: 100%; padding: 14px; border: 2px solid #eee; border-radius: 10px; box-sizing: border-box; font-size: 16px; text-align: center; margin-bottom: 10px; }
+    .btn { background: var(--primary); color: white; border: none; padding: 16px; border-radius: 10px; cursor: pointer; font-weight: bold; width: 100%; font-size: 16px; transition: opacity 0.2s; }
     
     .cart-container { position: relative; cursor: pointer; font-size: 30px; }
-    .cart-badge { 
-      position: absolute; 
-      top: -5px; 
-      right: -8px; 
-      background: white; 
-      color: var(--primary); 
-      border: 2px solid var(--primary); 
-      border-radius: 50%; 
-      width: 20px;
-      height: 20px;
-      font-size: 11px; 
-      font-weight: bold; 
-      display: none; 
-      align-items: center;
-      justify-content: center;
-    }
+    .cart-badge { position: absolute; top: -5px; right: -8px; background: white; color: var(--primary); border: 2px solid var(--primary); border-radius: 50%; width: 22px; height: 22px; font-size: 11px; font-weight: bold; display: none; align-items: center; justify-content: center; }
     
-    .logout-btn { 
-      background: rgba(255,255,255,0.2); 
-      border: none; 
-      color: white; 
-      width: 40px; 
-      height: 40px; 
-      border-radius: 10px; 
-      cursor: pointer; 
-      font-size: 20px; 
-      display: flex; 
-      align-items: center; 
-      justify-content: center; 
-    }
+    .cart-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 200; overflow-y: auto; padding: 20px; box-sizing: border-box; }
+    .cart-item { display: flex; justify-content: space-between; align-items: center; padding: 15px; border-bottom: 1px solid #eee; text-align: left; }
     
-    .cart-modal { 
-      display: none; 
-      position: fixed; 
-      top: 0; 
-      left: 0; 
-      width: 100%; 
-      height: 100%; 
-      background: white; 
-      z-index: 200; 
-      overflow-y: auto; 
-      padding: 20px; 
-      box-sizing: border-box; 
-    }
-    
-    .cart-item { 
-      display: flex; 
-      justify-content: space-between; 
-      align-items: center; 
-      padding: 15px; 
-      border-bottom: 1px solid #eee; 
-      text-align: left; 
-    }
-    
-    .btn-del { color: #d40000; border: none; background: none; font-size: 22px; cursor: pointer; padding: 5px; }
-    
-    .total-floating {
-      background: white; 
-      padding: 15px 25px; 
-      border-radius: 20px; 
-      margin-top: 25px; 
-      border-top: 5px solid var(--primary);
-      box-shadow: var(--shadow);
-    }
-    
-    .loading-overlay {
-      position: fixed;
-      top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(255,255,255,0.8);
-      display: none;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
-    }
-    
-    .spinner {
-      width: 40px;
-      height: 40px;
-      border: 4px solid #f3f3f3;
-      border-top: 4px solid var(--primary);
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin-bottom: 10px;
-    }
-    
+    .tour-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 2000; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 30px; color: white; text-align: center; }
+    .tour-card { background: white; color: #333; padding: 25px; border-radius: 20px; max-width: 320px; width: 100%; }
+
+    .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
+    .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
-  <div id="loading" class="loading-overlay">
-    <div class="spinner"></div>
-    <p id="loadingText">Buscando produto...</p>
+  <div id="tourOverlay" class="tour-overlay">
+    <div class="tour-card">
+      <h2 id="tourTitle" style="color:var(--primary)">Bem-vindo!</h2>
+      <p id="tourDesc">Vamos te mostrar como economizar agora mesmo.</p>
+      <button class="btn" id="btnTourNext">PRÓXIMO</button>
+    </div>
   </div>
+
+  <div id="loading" class="loading-overlay"><div class="spinner"></div><p>Buscando produto...</p></div>
 
   <header class="header">
     <div class="header-info">
-        <img src="logo-white.png" class="header-logo" alt="Logo" onerror="this.src='https://img.icons8.com/ios-filled/50/ffffff/shopping-cart.png'">
-        <div>
-          <small style="font-size: 10px; opacity: 0.9; text-transform: uppercase; letter-spacing: 1px;">Bem-vindo,</small> 
-          <br><span id="userNameDisplay" style="font-weight: bold; font-size: 16px;">Carregando...</span>
-        </div>
+        <img src="logo-white.png" class="header-logo" alt="Logo">
+        <div><small style="font-size: 10px;">BEM-VINDO,</small><br><span id="userNameDisplay" style="font-weight: bold;">...</span></div>
     </div>
-    <div style="display: flex; gap: 18px; align-items: center;">
-      <div class="cart-container" id="btnVerCarrinho">
-        🛒<span class="cart-badge" id="cartCount">0</span>
-      </div>
-      <button class="logout-btn" id="btnLogout" title="Sair">🚪</button>
+    <div style="display: flex; gap: 15px; align-items: center;">
+      <button onclick="location.href='history.html'" style="background:none; border:none; font-size:24px; cursor:pointer;" title="Ver Gastos">📊</button>
+      <div class="cart-container" id="btnVerCarrinho">🛒<span class="cart-badge" id="cartCount">0</span></div>
+      <button onclick="confirm('Sair da conta?') && location.replace('login.html')" style="background:none; border:none; font-size:22px; cursor:pointer;">🚪</button>
     </div>
   </header>
 
   <main class="container">
-    <div id="reader"></div>
-    <button class="btn" id="btnIniciarScan" style="margin-bottom: 10px;">📷 ESCANEAR PRODUTO</button>
-    <button class="btn" id="btnPararScan" style="display:none; background:#444; margin-bottom: 10px;">⏹️ PARAR CÂMERA</button>
+    <div class="scanner-wrapper" id="scannerWrapper">
+        <div id="reader"></div>
+        <button class="torch-btn" id="btnTorch">🔦</button>
+    </div>
 
-    <div class="manual-box">
-        <div class="input-group">
-          <label>BUSCA MANUAL (CÓDIGO DE BARRAS)</label>
-          <div style="display: flex; gap: 10px;">
-            <input type="text" id="inputManualCode" placeholder="Ex: 7891234567890" inputmode="numeric" style="flex: 1;">
-            <button class="btn" id="btnBuscaManual" style="width: auto; padding: 0 20px; background: #444;">OK</button>
-          </div>
-        </div>
+    <button class="btn" id="btnIniciarScan">📷 ESCANEAR PRODUTO</button>
+
+    <div style="margin-top:20px; background:white; padding:20px; border-radius:16px; border:1px solid #ddd;">
+        <input type="text" id="inputManualCode" placeholder="OU DIGITE O CÓDIGO" inputmode="numeric">
+        <button class="btn" id="btnBuscaManual">BUSCAR MANUALMENTE</button>
     </div>
 
     <div id="productCard" class="product-card">
-      <div class="product-img-container">
-        <img id="pImg" src="" class="product-img" onerror="this.src='https://img.icons8.com/ios/100/cccccc/image.png'">
-      </div>
-      
-      <div class="input-group">
-        <label>NOME DO PRODUTO</label>
-        <input type="text" id="pNomeInput" placeholder="Nome do Produto">
-      </div>
-      
-      <div class="input-group">
-        <label>PREÇO UNITÁRIO (R$)</label>
-        <input type="number" id="pPreco" placeholder="0.00" step="0.01" inputmode="decimal">
-      </div>
-
+      <div class="product-img-container"><img id="pImg" src="" class="product-img"></div>
+      <input type="text" id="pNomeInput" placeholder="Nome do Produto">
+      <input type="number" id="pPreco" placeholder="Preço R$" step="0.01" inputmode="decimal">
       <div class="qty-box">
         <button class="qty-btn" id="btnMinus">−</button>
         <span id="pQtdDisplay">1</span>
         <button class="qty-btn" id="btnPlus">+</button>
       </div>
-      
-      <button class="btn" id="btnConfirmar" style="background:var(--success); box-shadow: 0 4px 6px rgba(40, 167, 69, 0.2);">ADICIONAR AO CARRINHO</button>
-      <button class="btn" style="background:#666; margin-top:12px; padding:10px; font-size:14px; box-shadow: none;" id="btnFecharCard">CANCELAR</button>
+      <button class="btn" id="btnConfirmar" style="background:var(--success)">ADICIONAR AO CARRINHO</button>
+      <button class="btn" style="background:#666; margin-top:10px;" onclick="document.getElementById('productCard').style.display='none'">CANCELAR</button>
     </div>
 
-    <div class="total-floating">
-      <span style="font-size: 14px; color: #666; font-weight: 600;">TOTAL NO CARRINHO</span>
-      <div style="font-size: 36px; font-weight: 800; color: var(--primary);">R$ <span id="totalGeral">0.00</span></div>
+    <div style="background:white; padding:15px; border-radius:16px; margin-top:20px; border-top:5px solid var(--primary); box-shadow: var(--shadow);">
+      <small style="font-weight: bold; color: #666;">TOTAL NO CARRINHO</small>
+      <div style="font-size: 32px; font-weight: 800; color: var(--primary);">R$ <span id="totalGeral">0.00</span></div>
     </div>
   </main>
 
   <div id="modalCarrinho" class="cart-modal">
-    <div style="display:flex; justify-content: space-between; align-items: center; border-bottom: 3px solid var(--primary); padding-bottom: 15px;">
-      <h2 style="margin:0; color: var(--primary);">Meu Carrinho</h2>
-      <button id="btnFecharCarrinho" style="border:none; background:none; font-size:35px; cursor:pointer; color: #999;">&times;</button>
+    <div style="display:flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--primary); padding-bottom: 10px;">
+      <h2 style="margin:0; color:var(--primary)">Meu Carrinho</h2>
+      <button onclick="document.getElementById('modalCarrinho').style.display='none'" style="border:none; background:none; font-size:35px; color:#999;">&times;</button>
     </div>
     <div id="listaItensCarrinho" style="margin-top:20px;"></div>
-    <div style="margin-top:40px; border-top:2px solid #eee; padding-top:20px; position: sticky; bottom: 0; background: white; padding-bottom: 20px;">
-      <button class="btn" id="btnFinalizarCompra" style="background:#000; margin-bottom: 10px;">FINALIZAR COMPRA</button>
-      <button class="btn" style="background:#666;" id="btnVoltar">VOLTAR</button>
+    <div style="margin-top:40px; border-top:1px solid #eee; padding-top:20px;">
+      <button class="btn" id="btnFinalizarCompra">FINALIZAR COMPRA</button>
+      <button class="btn" style="background:#666; margin-top:10px;" onclick="document.getElementById('modalCarrinho').style.display='none'">VOLTAR</button>
     </div>
   </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
-    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js";
     import { getDatabase, ref, onValue, update, push, get, remove, set } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-database.js";
 
+    // --- CONFIGURAÇÃO REAL DO TEU PROJETO ---
     const firebaseConfig = {
       apiKey: "AIzaSyCtke_2T3e0HDDMqJsfJsRGs5KcKtN3Xe8",
       authDomain: "scanlistmarket-30143.firebaseapp.com",
@@ -351,211 +149,98 @@
     const db = getDatabase(app);
     let userUID = null;
     let currentQty = 1;
-    let lastScannedCode = "";
-    let isScanning = false;
+    let lastCode = "";
 
     const html5QrCode = new Html5Qrcode("reader");
+
+    const tourSteps = [
+      { title: "Escaneie tudo!", desc: "Clique no botão de câmera para ler o código de barras." },
+      { title: "Memória Inteligente", desc: "Se o nome vier errado, edite-o. O app aprenderá!" },
+      { title: "Use a Lanterna", desc: "Em locais escuros, use o botão 🔦 no scanner." },
+      { title: "Instale o App", desc: "Adicione à tela de início para acesso rápido!" }
+    ];
+    let currentStep = 0;
 
     onAuthStateChanged(auth, (user) => {
       if (user) {
         userUID = user.uid;
-        onValue(ref(db, 'users/' + userUID), (snapshot) => {
-          const data = snapshot.val();
-          if (data) {
-            document.getElementById("userNameDisplay").innerText = data.username || "Usuário";
-            document.getElementById("totalGeral").innerText = (data.totalCart || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        if(!localStorage.getItem("tourVisto")) document.getElementById("tourOverlay").style.display = "flex";
+        
+        onValue(ref(db, 'users/' + userUID), (snap) => {
+          if (snap.exists()) {
+            document.getElementById("userNameDisplay").innerText = snap.val().username;
+            document.getElementById("totalGeral").innerText = (snap.val().totalCart || 0).toFixed(2);
           }
-        }, (error) => console.error("Erro ao ler perfil:", error));
-
-        onValue(ref(db, `users/${userUID}/items`), (snapshot) => {
-          const count = snapshot.size || 0;
-          const badge = document.getElementById("cartCount");
-          badge.innerText = count;
-          badge.style.display = count > 0 ? "flex" : "none";
-        }, (error) => console.error("Erro ao ler itens:", error));
-      } else { 
-        window.location.href = "login.html"; 
-      }
+        });
+        onValue(ref(db, `users/${userUID}/items`), (snap) => {
+          const count = snap.size || 0;
+          document.getElementById("cartCount").innerText = count;
+          document.getElementById("cartCount").style.display = count > 0 ? "flex" : "none";
+        });
+      } else { window.location.href = "login.html"; }
     });
 
-    document.getElementById("btnLogout").onclick = () => { 
-      if(confirm("Deseja realmente sair?")) {
-        signOut(auth).then(() => window.location.href = "login.html"); 
+    document.getElementById("btnTourNext").onclick = () => {
+      currentStep++;
+      if(currentStep < tourSteps.length) {
+        document.getElementById("tourTitle").innerText = tourSteps[currentStep].title;
+        document.getElementById("tourDesc").innerText = tourSteps[currentStep].desc;
+      } else {
+        document.getElementById("tourOverlay").style.display = "none";
+        localStorage.setItem("tourVisto", "true");
       }
     };
 
-    document.getElementById("btnPlus").onclick = () => { 
-      currentQty++; 
-      document.getElementById("pQtdDisplay").innerText = currentQty; 
-    };
-    document.getElementById("btnMinus").onclick = () => { 
-      if(currentQty > 1) { 
-        currentQty--; 
-        document.getElementById("pQtdDisplay").innerText = currentQty; 
-      } 
-    };
-
-    const btnIniciar = document.getElementById("btnIniciarScan");
-    const btnParar = document.getElementById("btnPararScan");
-    const readerDiv = document.getElementById("reader");
-
-    btnIniciar.onclick = () => {
-      readerDiv.style.display = "block";
-      btnIniciar.style.display = "none";
-      btnParar.style.display = "block";
-      isScanning = true;
-      
-      // Configuração otimizada para iOS/Safari
-      const config = { 
-        fps: 10, 
-        qrbox: { width: 250, height: 150 },
-        aspectRatio: 1.0
-      };
-
-      html5QrCode.start(
-        { facingMode: "environment" }, 
-        config, 
-        (codigo) => {
-          pararScanner();
+    document.getElementById("btnIniciarScan").onclick = () => {
+      document.getElementById("scannerWrapper").style.display = "block";
+      html5QrCode.start({ facingMode: "environment" }, { fps: 20, qrbox: 250 }, (codigo) => {
+        html5QrCode.stop().then(() => {
+          document.getElementById("scannerWrapper").style.display = "none";
           buscarAPI(codigo);
-        },
-        (errorMessage) => { }
-      ).catch(err => {
-        console.error("Erro ao acessar câmera:", err);
-        alert("Erro ao acessar câmera. Verifique se deu permissão no Safari.");
-        pararScanner();
+        });
       });
     };
 
-    btnParar.onclick = pararScanner;
-
-    function pararScanner() {
-      if (isScanning) {
-        html5QrCode.stop().then(() => {
-          readerDiv.style.display = "none";
-          btnIniciar.style.display = "block";
-          btnParar.style.display = "none";
-          isScanning = false;
-        }).catch(err => console.error("Erro ao parar scanner", err));
-      }
-    }
-
     document.getElementById("btnBuscaManual").onclick = () => {
-        const code = document.getElementById("inputManualCode").value.trim();
-        if(!code) return alert("Digite um código de barras!");
-        buscarAPI(code);
+      const c = document.getElementById("inputManualCode").value.trim();
+      if(c) buscarAPI(c);
     };
 
     async function buscarAPI(codigo) {
-      lastScannedCode = codigo.toString().trim();
-      console.log("Iniciando busca para:", lastScannedCode);
-      
+      lastCode = codigo;
       document.getElementById("loading").style.display = "flex";
-      document.getElementById("loadingText").innerText = "Buscando produto...";
-      
       document.getElementById("productCard").style.display = "none";
-      document.getElementById("pNomeInput").value = "";
-      document.getElementById("pPreco").value = "";
-      document.getElementById("pImg").src = "";
-      currentQty = 1; 
-      document.getElementById("pQtdDisplay").innerText = 1;
-
-      try {
-        let foundLocally = false;
-        try {
-          const localSnap = await get(ref(db, `products/${lastScannedCode}`));
-          if (localSnap.exists()) {
-              const p = localSnap.val();
-              document.getElementById("pNomeInput").value = p.nome || "";
-              document.getElementById("pImg").src = p.imagem || "";
-              foundLocally = true;
-          }
-        } catch (dbErr) {
-          console.warn("Firebase Products inacessível:", dbErr.message);
-        }
-        
-        if (!foundLocally) {
-            try {
-              const response = await fetch(`https://world.openfoodfacts.org/api/v2/product/${lastScannedCode}?fields=product_name,image_url,brands`);
-              if (!response.ok) throw new Error("Falha na resposta da rede");
-              const data = await response.json();
-              if (data.status === 1 && data.product) {
-                  const nomeProd = data.product.product_name || "";
-                  const marca = data.product.brands ? ` (${data.product.brands})` : "";
-                  document.getElementById("pNomeInput").value = nomeProd + marca;
-                  document.getElementById("pImg").src = data.product.image_url || "";
-              } else {
-                  document.getElementById("pNomeInput").placeholder = "Produto não encontrado. Digite o nome:";
-              }
-            } catch (apiErr) {
-              console.error("Erro na API externa:", apiErr);
-              document.getElementById("pNomeInput").placeholder = "Erro na busca. Digite o nome manualmente:";
-            }
-        }
-        
-        document.getElementById("loading").style.display = "none";
-        document.getElementById("productCard").style.display = "block";
-        document.getElementById("inputManualCode").value = "";
-        document.getElementById("productCard").scrollIntoView({ behavior: 'smooth' });
-        
-        setTimeout(() => {
-          if(document.getElementById("pNomeInput").value) {
-            document.getElementById("pPreco").focus();
-          } else {
-            document.getElementById("pNomeInput").focus();
-          }
-        }, 500);
-
-      } catch (e) {
-        console.error("Erro geral na busca:", e);
-        document.getElementById("loading").style.display = "none";
-        document.getElementById("productCard").style.display = "block";
-        document.getElementById("pNomeInput").placeholder = "Digite o nome manualmente:";
+      const local = await get(ref(db, `products/${codigo}`));
+      if(local.exists()){
+        document.getElementById("pNomeInput").value = local.val().nome;
+        document.getElementById("pImg").src = local.val().imagem || "";
+      } else {
+        const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${codigo}?fields=product_name,image_url`);
+        const data = await res.json();
+        document.getElementById("pNomeInput").value = data.status === 1 ? data.product.product_name : "";
+        document.getElementById("pImg").src = data.status === 1 ? data.product.image_url : "";
       }
+      document.getElementById("loading").style.display = "none";
+      document.getElementById("productCard").style.display = "block";
     }
 
     document.getElementById("btnConfirmar").onclick = async () => {
       const nome = document.getElementById("pNomeInput").value;
-      const precoStr = document.getElementById("pPreco").value.replace(',', '.');
-      const preco = parseFloat(precoStr);
-      
-      if (!nome) return alert("Por favor, informe o nome do produto.");
-      if (isNaN(preco) || preco <= 0) return alert("Por favor, informe um preço válido.");
-      
-      const subtotal = preco * currentQty;
-      
-      try {
-        if (lastScannedCode) {
-          try {
-            await set(ref(db, `products/${lastScannedCode}`), { 
-              nome: nome, 
-              imagem: document.getElementById("pImg").src 
-            });
-          } catch (e) { console.warn("Não foi possível salvar na memória global de produtos."); }
-        }
-
-        const userRef = ref(db, 'users/' + userUID);
-        const snap = await get(userRef);
-        const totalAtual = snap.val().totalCart || 0;
-        
-        await push(ref(db, `users/${userUID}/items`), { 
-          nome, 
-          preco, 
-          qtd: currentQty, 
-          subtotal,
-          timestamp: Date.now()
-        });
-        
-        await update(userRef, { totalCart: totalAtual + subtotal });
-        
-        document.getElementById("productCard").style.display = "none";
-        document.getElementById("pPreco").value = "";
-        alert("Produto adicionado!");
-        
-      } catch (err) {
-        alert("Erro ao salvar no carrinho: " + err.message);
-      }
+      const preco = parseFloat(document.getElementById("pPreco").value);
+      if(!nome || !preco) return alert("Preencha os campos!");
+      const sub = preco * currentQty;
+      await set(ref(db, `products/${lastCode}`), { nome, imagem: document.getElementById("pImg").src });
+      const snap = await get(ref(db, 'users/' + userUID));
+      await push(ref(db, `users/${userUID}/items`), { nome, preco, qtd: currentQty, subtotal: sub });
+      await update(ref(db, 'users/' + userUID), { totalCart: (snap.val().totalCart || 0) + sub });
+      document.getElementById("productCard").style.display = "none";
+      document.getElementById("pPreco").value = "";
+      currentQty = 1;
+      document.getElementById("pQtdDisplay").innerText = "1";
     };
+
+    document.getElementById("btnPlus").onclick = () => { currentQty++; document.getElementById("pQtdDisplay").innerText = currentQty; };
+    document.getElementById("btnMinus").onclick = () => { if(currentQty > 1) { currentQty--; document.getElementById("pQtdDisplay").innerText = currentQty; } };
 
     document.getElementById("btnVerCarrinho").onclick = carregarCarrinho;
     
@@ -563,69 +248,27 @@
       const modal = document.getElementById("modalCarrinho");
       const lista = document.getElementById("listaItensCarrinho");
       modal.style.display = "block";
-      lista.innerHTML = "<p>Carregando itens...</p>";
-      
-      try {
-        const snapshot = await get(ref(db, `users/${userUID}/items`));
-        lista.innerHTML = "";
-        
-        if (!snapshot.exists()) {
-          lista.innerHTML = "<div style='padding:40px; color:#999;'>Seu carrinho está vazio.</div>";
-          return;
-        }
-
-        snapshot.forEach((itemSnap) => {
-          const item = itemSnap.val();
-          const itemKey = itemSnap.key;
-          
-          const itemDiv = document.createElement("div");
-          itemDiv.className = "cart-item";
-          itemDiv.innerHTML = `
-            <div>
-              <strong>${item.nome}</strong><br>
-              <small>${item.qtd}x R$ ${item.preco.toFixed(2)}</small>
-            </div>
-            <div style="display:flex; align-items:center; gap:15px;">
-              <span style="font-weight:bold;">R$ ${item.subtotal.toFixed(2)}</span>
-              <button class="btn-del" data-key="${itemKey}" data-sub="${item.subtotal}">🗑️</button>
-            </div>
-          `;
-          lista.appendChild(itemDiv);
-        });
-
-        document.querySelectorAll(".btn-del").forEach(btn => {
-          btn.onclick = async (e) => {
-            const key = e.currentTarget.dataset.key;
-            const sub = parseFloat(e.currentTarget.dataset.sub);
-            if(confirm("Remover este item?")) {
-              const userRef = ref(db, 'users/' + userUID);
-              const snap = await get(userRef);
-              await remove(ref(db, `users/${userUID}/items/${key}`));
-              await update(userRef, { totalCart: Math.max(0, (snap.val().totalCart || 0) - sub) });
-              carregarCarrinho();
-            }
-          };
-        });
-      } catch (err) {
-        lista.innerHTML = "Erro ao carregar carrinho.";
-      }
+      const snap = await get(ref(db, `users/${userUID}/items`));
+      lista.innerHTML = snap.exists() ? "" : "<p style='text-align:center;'>Vazio</p>";
+      snap.forEach(item => {
+        lista.innerHTML += `<div class="cart-item">
+          <div><strong>${item.val().nome}</strong><br><small>${item.val().qtd}x R$ ${item.val().preco.toFixed(2)}</small></div>
+          <div style="display:flex; align-items:center; gap:10px;">R$ ${item.val().subtotal.toFixed(2)}</div>
+        </div>`;
+      });
     }
 
-    document.getElementById("btnFinalizarCompra").onclick = async () => { 
-      const snap = await get(ref(db, `users/${userUID}/items`));
-      if(!snap.exists()) return alert("O carrinho está vazio!");
-      
-      if(confirm("Deseja finalizar esta compra?")) { 
-        await remove(ref(db, `users/${userUID}/items`)); 
-        await update(ref(db, 'users/' + userUID), { totalCart: 0 }); 
-        document.getElementById("modalCarrinho").style.display = "none";
-        alert("Compra finalizada com sucesso!");
-      } 
+    document.getElementById("btnFinalizarCompra").onclick = async () => {
+      const snap = await get(ref(db, 'users/' + userUID));
+      const total = snap.val().totalCart || 0;
+      if(total === 0) return alert("Vazio!");
+      if(confirm("Finalizar e salvar no histórico?")) {
+        await push(ref(db, `history/${userUID}`), { data: Date.now(), total });
+        await remove(ref(db, `users/${userUID}/items`));
+        await update(ref(db, 'users/' + userUID), { totalCart: 0 });
+        location.href = 'history.html';
+      }
     };
-
-    document.getElementById("btnFecharCarrinho").onclick = () => document.getElementById("modalCarrinho").style.display = "none";
-    document.getElementById("btnVoltar").onclick = () => document.getElementById("modalCarrinho").style.display = "none";
-    document.getElementById("btnFecharCard").onclick = () => document.getElementById("productCard").style.display = "none";
   </script>
 </body>
 </html>

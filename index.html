@@ -3,26 +3,77 @@
 <head>
   <meta charset="UTF-8">
   <title>Scanlist Market - Criar Conta</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#d40000">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="apple-touch-icon" href="logo-white.png">
+
   <style>
-    .login-body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #d40000; margin: 0; }
-    .login-card { background: white; padding: 30px; border-radius: 12px; width: 90%; max-width: 400px; text-align: center; box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
-    .login-logo { width: 180px; margin-bottom: 20px; }
-    input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 16px; }
-    button { width: 100%; padding: 14px; background-color: #d40000; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; margin-top: 10px; }
-    .switch { margin-top: 20px; font-size: 14px; }
-    a { color: #d40000; text-decoration: none; font-weight: bold; }
+    :root { --primary: #d40000; }
+    body { 
+      font-family: -apple-system, system-ui, sans-serif; 
+      display: flex; 
+      justify-content: center; 
+      align-items: center; 
+      height: 100vh; 
+      background-color: var(--primary); 
+      margin: 0; 
+    }
+    .register-card { 
+      background: white; 
+      padding: 35px; 
+      border-radius: 20px; 
+      width: 90%; 
+      max-width: 380px; 
+      text-align: center; 
+      box-shadow: 0 10px 25px rgba(0,0,0,0.2); 
+    }
+    .register-logo { width: 180px; margin-bottom: 20px; }
+    h2 { color: var(--primary); margin-bottom: 20px; font-size: 22px; }
+    
+    input { 
+      width: 100%; 
+      padding: 14px; 
+      margin: 8px 0; 
+      border: 2px solid #eee; 
+      border-radius: 10px; 
+      box-sizing: border-box; 
+      font-size: 16px; 
+      text-align: center;
+    }
+    input:focus { border-color: var(--primary); outline: none; }
+    
+    .btn-register { 
+      width: 100%; 
+      padding: 16px; 
+      background-color: var(--primary); 
+      color: white; 
+      border: none; 
+      border-radius: 10px; 
+      cursor: pointer; 
+      font-weight: bold; 
+      font-size: 16px;
+      margin-top: 15px;
+    }
+    .switch { margin-top: 25px; font-size: 14px; color: #666; }
+    a { color: var(--primary); text-decoration: none; font-weight: bold; }
   </style>
 </head>
-<body class="login-body">
-  <div class="login-card">
-    <img src="logo-white.png" class="login-logo" alt="Scanlist Market">
-    <input type="text" id="name" placeholder="Nome completo">
-    <input type="email" id="email" placeholder="Email">
-    <input type="password" id="password" placeholder="Senha (mínimo 6 caracteres)">
-    <input type="password" id="confirm" placeholder="Confirmar senha">
-    <button id="btnCriarAcesso">Criar acesso</button>
-    <div class="switch">Já possui uma conta? <a href="login.html">Clique aqui</a></div>
+<body>
+  <div class="register-card">
+    <img src="logo-white.png" class="register-logo" alt="Scanlist">
+    <h2>Criar Nova Conta</h2>
+    
+    <input type="text" id="username" placeholder="Como te chamas?">
+    <input type="email" id="email" placeholder="Teu melhor e-mail">
+    <input type="password" id="pass" placeholder="Cria uma senha">
+    
+    <button class="btn-register" id="btnRegister">COMEÇAR A ECONOMIZAR</button>
+    
+    <div class="switch">Já tens conta? <br><br> <a href="login.html">ENTRAR AGORA</a></div>
   </div>
 
   <script type="module">
@@ -44,25 +95,40 @@
     const auth = getAuth(app);
     const db = getDatabase(app);
 
-    document.getElementById("btnCriarAcesso").onclick = async function() {
-      const nameInput = document.getElementById("name").value;
-      const emailInput = document.getElementById("email").value;
-      const passInput = document.getElementById("password").value;
-      const confirmInput = document.getElementById("confirm").value;
+    document.getElementById("btnRegister").onclick = async function() {
+      const username = document.getElementById("username").value.trim();
+      const email = document.getElementById("email").value.trim();
+      const pass = document.getElementById("pass").value;
 
-      if (!nameInput || !emailInput || !passInput || !confirmInput) return alert("Preencha todos os campos!");
-      if (passInput !== confirmInput) return alert("As senhas não conferem!");
+      if (!username || !email || !pass) return alert("Por favor, preenche todos os dados!");
 
       try {
-        const userCredential = await createUserWithEmailAndPassword(auth, emailInput, passInput);
-        await set(ref(db, 'users/' + userCredential.user.uid), {
-          username: nameInput,
-          email: emailInput,
-          totalCart: 0
+        const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
+        const user = userCredential.user;
+
+        // Criar perfil inicial no Database
+        await set(ref(db, 'users/' + user.uid), {
+          username: username,
+          email: email,
+          totalCart: 0,
+          createdAt: Date.now()
         });
+
         window.location.href = "app.html";
-      } catch (error) { alert("Erro: " + error.message); }
+      } catch (error) {
+        console.error(error);
+        alert("Erro ao criar conta. Verifica os dados ou tenta outro e-mail.");
+      }
     };
+
+    // Registro do Service Worker (PWA)
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').then(() => {
+          console.log('PWA: Service Worker ativo');
+        });
+      });
+    }
   </script>
 </body>
 </html>

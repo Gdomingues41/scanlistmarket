@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Scanlist Market - Histórico</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root { --primary: #d40000; --gray-light: #f8f9fa; }
+    body { font-family: -apple-system, sans-serif; background: var(--gray-light); margin: 0; padding-bottom: 30px; }
+    .header { background: var(--primary); color: white; padding: 15px; display: flex; align-items: center; }
+    .container { padding: 20px; max-width: 500px; margin: 0 auto; }
+    .card { background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 20px; }
+    .history-item { display: flex; justify-content: space-between; padding: 12px; border-bottom: 1px solid #eee; }
+    .btn-red { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 10px; width: 100%; font-weight: bold; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <button onclick="location.href='app.html'" style="background:none; border:none; color:white; font-size:24px; cursor:pointer;">←</button>
+    <span style="margin-left: 15px; font-weight: bold;">Meus Gastos</span>
+  </header>
+
+  <main class="container">
+    <div class="card">
+      <h3 style="text-align:center;">Resumo de Gastos</h3>
+      <canvas id="myChart"></canvas>
+    </div>
+
+    <div class="card">
+      <h3 style="color:var(--primary)">Últimas Compras</h3>
+      <div id="listaHistorico">Carregando...</div>
+    </div>
+    
+    <button class="btn-red" onclick="location.href='app.html'">NOVA COMPRA</button>
+  </main>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js";
+    import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-database.js";
+
+    // --- CONFIGURAÇÃO REAL DO TEU PROJETO ---
+    const firebaseConfig = {
+      apiKey: "AIzaSyCtke_2T3e0HDDMqJsfJsRGs5KcKtN3Xe8",
+      authDomain: "scanlistmarket-30143.firebaseapp.com",
+      databaseURL: "https://scanlistmarket-30143-default-rtdb.firebaseio.com",
+      projectId: "scanlistmarket-30143",
+      storageBucket: "scanlistmarket-30143.appspot.com",
+      messagingSenderId: "428406265714",
+      appId: "1:428406265714:web:0a9d92dc1229458a3d6feb"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getDatabase(app);
+
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        const snap = await get(ref(db, `history/${user.uid}`));
+        if (snap.exists()) {
+          const dados = snap.val();
+          const lista = document.getElementById("listaHistorico");
+          lista.innerHTML = "";
+          let total = 0;
+          Object.values(dados).forEach(c => {
+            total += c.total;
+            lista.innerHTML += `<div class="history-item"><span>${new Date(c.data).toLocaleDateString()}</span><span style="color:var(--primary); font-weight:bold;">R$ ${c.total.toFixed(2)}</span></div>`;
+          });
+          gerarGrafico(total);
+        } else { document.getElementById("listaHistorico").innerText = "Sem histórico."; }
+      } else { location.href = 'login.html'; }
+    });
+
+    function gerarGrafico(total) {
+      new Chart(document.getElementById('myChart'), {
+        type: 'doughnut',
+        data: {
+          labels: ['Total Gasto'],
+          datasets: [{ data: [total, 0], backgroundColor: ['#d40000', '#eee'], borderWidth: 0 }]
+        },
+        options: { cutout: '75%' }
+      });
+    }
+  </script>
+</body>
+</html>
