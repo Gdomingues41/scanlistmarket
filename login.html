@@ -5,14 +5,9 @@
   <title>Scanlist Market - Login</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <style>
-    /* DEFINIÇÃO DE CORES E FONTES */
-    :root { 
-      --primary: #d40000; 
-      --bg-light: #f8f9fa; /* Cinza claro para o fundo */
-      --font-size: 16px; 
-    }
+    :root { --primary: #d40000; --bg: #f8f9fa; --font-size: 16px; }
     
-    /* SPLASH SCREEN (TELA DE ABERTURA) - FUNDO BRANCO */
+    /* SPLASH SCREEN BRANCA PROFISSIONAL */
     #splash-screen {
       position: fixed;
       top: 0; left: 0;
@@ -25,108 +20,33 @@
       z-index: 9999;
       transition: opacity 0.5s ease;
     }
-    .splash-logo {
-      width: 200px;
-      height: auto;
-      animation: pulse 1.5s infinite;
-    }
-    @keyframes pulse {
-      0% { transform: scale(1); }
-      50% { transform: scale(1.05); }
-      100% { transform: scale(1); }
-    }
+    .splash-logo { width: 180px; height: auto; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
 
-    /* ESTILO DA TELA DE LOGIN - FUNDO CLARO */
-    body { 
-      font-family: -apple-system, sans-serif; 
-      background: var(--bg-light); 
-      margin: 0; 
-      display: flex; 
-      align-items: center; 
-      justify-content: center; 
-      height: 100vh; 
-      font-size: var(--font-size); 
-    }
-    
-    .login-card { 
-      background: white; 
-      padding: 40px 30px; 
-      border-radius: 24px; 
-      box-shadow: 0 10px 30px rgba(0,0,0,0.08); 
-      width: 90%; 
-      max-width: 400px; 
-      text-align: center; 
-    }
-    
-    .logo-login { 
-      height: 80px; 
-      margin-bottom: 25px; 
-      object-fit: contain; 
-    }
-
-    h2 { 
-      color: var(--primary); 
-      margin-bottom: 25px; 
-      font-weight: 800;
-    }
-
-    input { 
-      width: 100%; 
-      padding: 16px; 
-      border: 2px solid #eee; 
-      border-radius: 14px; 
-      margin-bottom: 15px; 
-      box-sizing: border-box; 
-      font-size: 1em; 
-      outline: none;
-      transition: border-color 0.3s;
-    }
-    
-    input:focus {
-      border-color: var(--primary);
-    }
-
-    .btn { 
-      background: var(--primary); 
-      color: white; 
-      border: none; 
-      padding: 18px; 
-      border-radius: 14px; 
-      width: 100%; 
-      font-weight: bold; 
-      cursor: pointer; 
-      font-size: 1.1em; 
-      box-shadow: 0 4px 12px rgba(212, 0, 0, 0.2);
-    }
-
-    .link { 
-      color: #666; 
-      text-decoration: none; 
-      display: block; 
-      margin-top: 25px; 
-      font-weight: 600; 
-      font-size: 0.9em; 
-    }
-    
+    /* FUNDO CINZA CLARO PARA NÃO FICAR VERMELHO DEMAIS */
+    body { font-family: -apple-system, sans-serif; background: var(--bg); margin: 0; display: flex; align-items: center; justify-content: center; height: 100vh; font-size: var(--font-size); }
+    .login-card { background: white; padding: 40px 30px; border-radius: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); width: 90%; max-width: 400px; text-align: center; }
+    .logo-login { height: 75px; margin-bottom: 25px; object-fit: contain; }
+    input { width: 100%; padding: 16px; border: 2px solid #eee; border-radius: 12px; margin-bottom: 15px; box-sizing: border-box; font-size: 1em; outline: none; }
+    input:focus { border-color: var(--primary); }
+    .btn { background: var(--primary); color: white; border: none; padding: 18px; border-radius: 12px; width: 100%; font-weight: bold; cursor: pointer; font-size: 1.1em; }
+    .link { color: #666; text-decoration: none; display: block; margin-top: 20px; font-weight: 600; }
     .link b { color: var(--primary); }
   </style>
 </head>
 <body>
 
   <div id="splash-screen">
-    <img src="logo-white.png" class="splash-logo" alt="Scanlist Market">
-    <div style="margin-top: 25px; color: #d40000; font-size: 1.2em; font-weight: 900;">Scanlist Market</div>
+    <img src="logo-white.png" class="splash-logo">
+    <div style="margin-top: 20px; color: #d40000; font-weight: 900; font-size: 1.2em;">Scanlist Market</div>
   </div>
 
   <div class="login-card">
-    <img src="logo-white.png" class="logo-login" alt="Logo">
-    <h2 id="txt-login-title">Entrar</h2>
-    
+    <img src="logo-white.png" class="logo-login">
+    <h2 style="color:var(--primary); margin-top:0;">Entrar</h2>
     <input type="email" id="email" placeholder="E-mail">
     <input type="password" id="password" placeholder="Senha">
-    
     <button class="btn" id="btnLogin">ENTRAR</button>
-    
     <a href="signup.html" class="link" id="txt-signup-link">Não tem conta? <b>Cadastre-se</b></a>
   </div>
 
@@ -134,58 +54,23 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
     import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js";
 
-    const firebaseConfig = { 
-      apiKey: "AIzaSyCtke_2T3e0HDDMqJsfJsRGs5KcKtN3Xe8", 
-      authDomain: "scanlistmarket-30143.firebaseapp.com", 
-      databaseURL: "https://scanlistmarket-30143-default-rtdb.firebaseio.com", 
-      projectId: "scanlistmarket-30143", 
-      storageBucket: "scanlistmarket-30143.appspot.com", 
-      messagingSenderId: "428406265714", 
-      appId: "1:428406265714:web:0a9d92dc1229458a3d6feb" 
-    };
-    
+    const firebaseConfig = { apiKey: "AIzaSyCtke_2T3e0HDDMqJsfJsRGs5KcKtN3Xe8", authDomain: "scanlistmarket-30143.firebaseapp.com", databaseURL: "https://scanlistmarket-30143-default-rtdb.firebaseio.com", projectId: "scanlistmarket-30143", storageBucket: "scanlistmarket-30143.appspot.com", messagingSenderId: "428406265714", appId: "1:428406265714:web:0a9d92dc1229458a3d6feb" };
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
 
-    // FUNÇÃO PARA SUMIR COM A SPLASH SCREEN
     window.addEventListener('load', () => {
       setTimeout(() => {
         const splash = document.getElementById('splash-screen');
-        if(splash) {
-          splash.style.opacity = '0';
-          setTimeout(() => splash.style.display = 'none', 500);
-        }
+        if(splash) { splash.style.opacity = '0'; setTimeout(() => splash.style.display = 'none', 500); }
       }, 2500);
     });
-
-    const dict = {
-      pt: { title: "Entrar", email: "E-mail", pass: "Senha", btn: "ENTRAR", link: "Não tem conta? <b>Cadastre-se</b>", error: "E-mail ou senha incorretos." },
-      en: { title: "Login", email: "Email", pass: "Password", btn: "LOGIN", link: "New here? <b>Sign up</b>", error: "Invalid email or password." },
-      es: { title: "Iniciar Sesión", email: "Correo", pass: "Contraseña", btn: "ENTRAR", link: "¿Eres nuevo? <b>Regístrate</b>", error: "Correo o contraseña incorrectos." }
-    };
-
-    function aplicarPreferencias() {
-      const lang = localStorage.getItem("appLang") || "pt";
-      const font = localStorage.getItem("appFontSize") || "16px";
-      document.documentElement.style.setProperty('--font-size', font);
-      document.getElementById("txt-login-title").innerText = dict[lang].title;
-      document.getElementById("email").placeholder = dict[lang].email;
-      document.getElementById("password").placeholder = dict[lang].pass;
-      document.getElementById("btnLogin").innerText = dict[lang].btn;
-      document.getElementById("txt-signup-link").innerHTML = dict[lang].link;
-    }
 
     document.getElementById("btnLogin").onclick = async () => {
       const email = document.getElementById("email").value;
       const pass = document.getElementById("password").value;
-      const lang = localStorage.getItem("appLang") || "pt";
-      try {
-        await signInWithEmailAndPassword(auth, email, pass);
-        location.href = "app.html";
-      } catch (e) { alert(dict[lang].error); }
+      try { await signInWithEmailAndPassword(auth, email, pass); location.href = "app.html"; } 
+      catch (e) { alert("Erro ao entrar. Verifique seus dados."); }
     };
-
-    window.onload = aplicarPreferencias;
   </script>
 </body>
 </html>

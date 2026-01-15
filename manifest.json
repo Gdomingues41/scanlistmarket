@@ -1,16 +1,7 @@
-{
-  "name": "Scanlist Market",
-  "short_name": "Scanlist",
-  "start_url": "login.html",
-  "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#d40000",
-  "icons": [
-    {
-      "src": "logo-splash.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
-    }
-  ]
-}
+"icons": [
+  {
+    "src": "logo-white.png",
+    "sizes": "512x512",
+    "type": "image/png"
+  }
+]
