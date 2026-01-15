@@ -9,25 +9,24 @@
     :root { --primary: #d40000; --success: #28a745; --bg: #f8f9fa; --font-size: 16px; }
     body { font-family: -apple-system, sans-serif; margin: 0; background: var(--bg); padding-bottom: 80px; font-size: var(--font-size); overflow-x: hidden; }
     
-    /* HEADER E NAVEGAÇÃO */
     .header { background: var(--primary); color: white; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
     .header-logo { height: 35px; }
     .nav-icons { display: flex; gap: 20px; align-items: center; }
     .icon-btn { background: none; border: none; font-size: 24px; cursor: pointer; color: white; position: relative; }
     .cart-badge { position: absolute; top: -5px; right: -8px; background: white; color: var(--primary); border-radius: 50%; width: 18px; height: 18px; font-size: 10px; font-weight: 900; display: flex; align-items: center; justify-content: center; }
 
-    /* CONTAINER E CARDS */
     .container { padding: 20px; text-align: center; max-width: 500px; margin: 0 auto; }
     .card { background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 20px; border: 1px solid #eee; }
+    
+    /* ÁREA DO SCANNER */
+    #reader { width: 100%; border-radius: 12px; overflow: hidden; margin-bottom: 20px; display: none; border: 2px solid var(--primary); }
     
     input { width: 100%; padding: 15px; border: 2px solid #eee; border-radius: 12px; margin-bottom: 12px; text-align: center; font-size: 1em; box-sizing: border-box; outline: none; }
     .btn { background: var(--primary); color: white; border: none; padding: 18px; border-radius: 12px; width: 100%; font-weight: bold; cursor: pointer; font-size: 1em; }
 
-    /* SELETOR DE QUANTIDADE */
     .qty-box { display: flex; align-items: center; justify-content: center; gap: 20px; margin: 20px 0; }
     .qty-btn { background: #f0f0f0; border: none; width: 45px; height: 45px; border-radius: 50%; font-size: 22px; font-weight: bold; cursor: pointer; }
 
-    /* MODAL DO CARRINHO */
     .modal-carrinho { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 2000; padding: 20px; box-sizing: border-box; overflow-y: auto; }
     .cart-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #eee; }
     .btn-excluir { background: #fff1f1; color: var(--primary); border: 1px solid var(--primary); padding: 5px 10px; border-radius: 8px; font-size: 11px; font-weight: bold; cursor: pointer; }
@@ -49,6 +48,7 @@
   </header>
 
   <main class="container">
+    <div id="reader"></div>
     <button class="btn" id="btnIniciarScan" style="margin-bottom:20px;">📷 ESCANEAR PRODUTO</button>
 
     <div class="card">
@@ -59,13 +59,11 @@
     <div id="productCard" class="card" style="display:none; border-top: 5px solid var(--success);">
       <input type="text" id="pNomeInput" placeholder="Nome do Produto">
       <input type="number" id="pPreco" placeholder="Preço R$" step="0.01">
-      
       <div class="qty-box">
         <button class="qty-btn" id="btnMinus">-</button>
         <span id="pQtdDisplay" style="font-weight:bold; font-size:1.5em;">1</span>
         <button class="qty-btn" id="btnPlus">+</button>
       </div>
-
       <button class="btn" id="btnConfirmar" style="background:var(--success)">ADICIONAR</button>
     </div>
 
@@ -80,7 +78,7 @@
       <h2 style="color:var(--primary); margin:0;">Meus Itens</h2>
       <button id="btnFecharCarrinho" style="font-size:35px; border:none; background:none; cursor:pointer;">&times;</button>
     </div>
-    <div id="listaItens" style="margin-top:15px;"></div>
+    <div id="listaItens"></div>
     <div class="total-modal">
       <span>TOTAL:</span>
       <span>R$ <span id="totalModalVal">0.00</span></span>
@@ -93,20 +91,11 @@
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js";
     import { getDatabase, ref, onValue, get, remove, update, push, set } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-database.js";
 
-    const firebaseConfig = { 
-        apiKey: "AIzaSyCtke_2T3e0HDDMqJsfJsRGs5KcKtN3Xe8", 
-        authDomain: "scanlistmarket-30143.firebaseapp.com", 
-        databaseURL: "https://scanlistmarket-30143-default-rtdb.firebaseio.com", 
-        projectId: "scanlistmarket-30143", 
-        storageBucket: "scanlistmarket-30143.appspot.com", 
-        messagingSenderId: "428406265714", 
-        appId: "1:428406265714:web:0a9d92dc1229458a3d6feb" 
-    };
-    
+    const firebaseConfig = { apiKey: "AIzaSyCtke_2T3e0HDDMqJsfJsRGs5KcKtN3Xe8", authDomain: "scanlistmarket-30143.firebaseapp.com", databaseURL: "https://scanlistmarket-30143-default-rtdb.firebaseio.com", projectId: "scanlistmarket-30143", storageBucket: "scanlistmarket-30143.appspot.com", messagingSenderId: "428406265714", appId: "1:428406265714:web:0a9d92dc1229458a3d6feb" };
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getDatabase(app);
-    let userUID = null; let lastCode = ""; let currentQty = 1;
+    let userUID = null; let lastCode = ""; let currentQty = 1; let html5QrCode;
 
     onAuthStateChanged(auth, (user) => {
       if (user) {
@@ -125,93 +114,106 @@
       } else { window.location.href = "login.html"; }
     });
 
-    // QUANTIDADE
-    document.getElementById("btnPlus").onclick = () => { currentQty++; document.getElementById("pQtdDisplay").innerText = currentQty; };
-    document.getElementById("btnMinus").onclick = () => { if(currentQty > 1) { currentQty--; document.getElementById("pQtdDisplay").innerText = currentQty; } };
+    // LÓGICA DO SCANNER REATIVADA
+    document.getElementById("btnIniciarScan").onclick = () => {
+      const reader = document.getElementById("reader");
+      reader.style.display = "block";
+      html5QrCode = new Html5Qrcode("reader");
+      html5QrCode.start(
+        { facingMode: "environment" }, 
+        { fps: 10, qrbox: { width: 250, height: 150 } },
+        (decodedText) => {
+          html5QrCode.stop();
+          reader.style.display = "none";
+          buscarAPI(decodedText);
+        }
+      ).catch(err => alert("Erro na câmera: " + err));
+    };
 
     // BUSCA MANUAL
-    document.getElementById("btnBuscaManual").onclick = async () => {
+    document.getElementById("btnBuscaManual").onclick = () => {
       const code = document.getElementById("inputManualCode").value.trim();
-      if(!code) return alert("Digite um código!");
-      lastCode = code; currentQty = 1; document.getElementById("pQtdDisplay").innerText = "1";
+      if(code) buscarAPI(code);
+    };
+
+    async function buscarAPI(codigo) {
+      lastCode = codigo; currentQty = 1; document.getElementById("pQtdDisplay").innerText = "1";
       document.getElementById("productCard").style.display = "block";
       document.getElementById("pNomeInput").value = "Buscando...";
       document.getElementById("pPreco").value = "";
 
-      const local = await get(ref(db, `products/${code}`));
+      const local = await get(ref(db, `products/${codigo}`));
       if(local.exists()){
         document.getElementById("pNomeInput").value = local.val().nome;
       } else {
         try {
-          const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${code}?fields=product_name`);
+          const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${codigo}?fields=product_name`);
           const data = await res.json();
           document.getElementById("pNomeInput").value = (data.status === 1) ? data.product.product_name : "";
         } catch(e) { document.getElementById("pNomeInput").value = ""; }
       }
       document.getElementById("pPreco").focus();
-    };
+    }
 
-    // ADICIONAR
+    // QUANTIDADE
+    document.getElementById("btnPlus").onclick = () => { currentQty++; document.getElementById("pQtdDisplay").innerText = currentQty; };
+    document.getElementById("btnMinus").onclick = () => { if(currentQty > 1) { currentQty--; document.getElementById("pQtdDisplay").innerText = currentQty; } };
+
+    // ADICIONAR AO FIREBASE
     document.getElementById("btnConfirmar").onclick = async () => {
       const nome = document.getElementById("pNomeInput").value;
       const preco = parseFloat(document.getElementById("pPreco").value);
-      if(!nome || isNaN(preco)) return alert("Dados inválidos!");
+      if(!nome || isNaN(preco)) return alert("Preencha os dados!");
       
-      const subtotal = preco * currentQty;
-      await push(ref(db, `users/${userUID}/items`), { nome, preco, qtd: currentQty, subtotal: subtotal });
+      const sub = preco * currentQty;
+      await push(ref(db, `users/${userUID}/items`), { nome, preco, qtd: currentQty, subtotal: sub });
       const snap = await get(ref(db, 'users/' + userUID));
-      await update(ref(db, 'users/' + userUID), { totalCart: (snap.val().totalCart || 0) + subtotal });
+      await update(ref(db, 'users/' + userUID), { totalCart: (snap.val().totalCart || 0) + sub });
       
       document.getElementById("productCard").style.display = "none";
       document.getElementById("inputManualCode").value = "";
     };
 
-    // MODAL E LISTAGEM
+    // MODAL CARRINHO COM EXCLUSÃO
     async function carregarListaItens() {
       const listaDiv = document.getElementById("listaItens");
       const snap = await get(ref(db, `users/${userUID}/items`));
-      listaDiv.innerHTML = snap.exists() ? "" : "<p style='text-align:center; color:#999;'>Carrinho Vazio</p>";
+      listaDiv.innerHTML = snap.exists() ? "" : "<p style='text-align:center;'>Carrinho Vazio</p>";
       if(snap.exists()) {
         snap.forEach(item => {
-          const dados = item.val();
-          listaDiv.innerHTML += `
-            <div class="cart-item">
-              <div><b>${dados.nome}</b><br><small>${dados.qtd}x R$ ${dados.preco.toFixed(2)}</small></div>
-              <div style="display:flex; align-items:center; gap:10px;">
-                <span style="font-weight:bold; color:var(--primary);">R$ ${dados.subtotal.toFixed(2)}</span>
-                <button class="btn-excluir" onclick="removerItemCarrinho('${item.key}', ${dados.subtotal})">EXCLUIR</button>
-              </div>
-            </div>`;
+          const d = item.val();
+          listaDiv.innerHTML += `<div class="cart-item">
+            <div><b>${d.nome}</b><br><small>${d.qtd}x R$ ${d.preco.toFixed(2)}</small></div>
+            <div style="display:flex; align-items:center; gap:10px;">
+              <span style="font-weight:bold; color:var(--primary);">R$ ${d.subtotal.toFixed(2)}</span>
+              <button class="btn-excluir" onclick="removerItemCarrinho('${item.key}', ${d.subtotal})">EXCLUIR</button>
+            </div>
+          </div>`;
         });
       }
     }
 
-    window.removerItemCarrinho = async (key, valor) => {
+    window.removerItemCarrinho = async (key, val) => {
       if(confirm("Remover item?")) {
         await remove(ref(db, `users/${userUID}/items/${key}`));
         const snap = await get(ref(db, 'users/' + userUID));
-        const novoTotal = (snap.val().totalCart || 0) - valor;
-        await update(ref(db, 'users/' + userUID), { totalCart: novoTotal < 0 ? 0 : novoTotal });
+        const novo = (snap.val().totalCart || 0) - val;
+        await update(ref(db, 'users/' + userUID), { totalCart: novo < 0 ? 0 : novo });
         carregarListaItens();
       }
     };
 
-    document.getElementById("btnAbrirCarrinho").onclick = () => {
-      document.getElementById("modalListagem").style.display = "block";
-      carregarListaItens();
-    };
+    document.getElementById("btnAbrirCarrinho").onclick = () => { document.getElementById("modalListagem").style.display = "block"; carregarListaItens(); };
     document.getElementById("btnFecharCarrinho").onclick = () => document.getElementById("modalListagem").style.display = "none";
 
-    // FINALIZAR
     document.getElementById("btnFinalizarCompra").onclick = async () => {
       const total = parseFloat(document.getElementById("totalModalVal").innerText);
-      if (total <= 0) return alert("Carrinho vazio!");
-      if (confirm(`Finalizar compra de R$ ${total.toFixed(2)}?`)) {
+      if (total <= 0) return alert("Vazio!");
+      if (confirm(`Finalizar R$ ${total.toFixed(2)}?`)) {
         await push(ref(db, `users/${userUID}/history`), { data: Date.now(), total: total });
         await remove(ref(db, `users/${userUID}/items`));
         await update(ref(db, 'users/' + userUID), { totalCart: 0 });
-        alert("Sucesso!");
-        document.getElementById("modalListagem").style.display = "none";
+        alert("Finalizado!");
         location.href = "history.html";
       }
     };
