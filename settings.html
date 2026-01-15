@@ -4,97 +4,98 @@
   <meta charset="UTF-8">
   <title>Scanlist Market - Configurações</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#d40000">
   <style>
-    :root { --primary: #d40000; --gray-light: #f8f9fa; }
-    body { font-family: -apple-system, sans-serif; background: var(--gray-light); margin: 0; padding-bottom: 30px; }
+    :root { --primary: #d40000; --gray-light: #f8f9fa; --font-size: 16px; }
+    body { 
+      font-family: -apple-system, sans-serif; 
+      background: var(--gray-light); 
+      margin: 0; 
+      font-size: var(--font-size); 
+    }
     .header { background: var(--primary); color: white; padding: 15px; display: flex; align-items: center; }
     .container { padding: 20px; max-width: 500px; margin: 0 auto; }
-    .card { background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 20px; }
-    .setting-item { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #eee; }
-    .setting-item:last-child { border-bottom: none; }
-    input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; margin-top: 10px; box-sizing: border-box; }
-    .btn { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 10px; width: 100%; font-weight: bold; cursor: pointer; margin-top: 10px; }
-    .btn-outline { background: white; color: var(--primary); border: 2px solid var(--primary); padding: 12px; border-radius: 10px; width: 100%; font-weight: bold; cursor: pointer; margin-top: 10px; }
+    .card { background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 20px; }
+    label { font-weight: bold; display: block; margin-top: 15px; margin-bottom: 5px; color: var(--primary); font-size: 1em; }
+    select, input { width: 100%; padding: 14px; border: 1px solid #ddd; border-radius: 8px; font-size: 1em; box-sizing: border-box; }
+    .btn { background: var(--primary); color: white; border: none; padding: 18px; border-radius: 10px; width: 100%; font-weight: bold; cursor: pointer; margin-top: 20px; font-size: 1em; }
+    .btn-outline { background: white; color: var(--primary); border: 2px solid var(--primary); padding: 12px; border-radius: 10px; width: 100%; font-weight: bold; cursor: pointer; margin-top: 10px; font-size: 0.9em; }
   </style>
 </head>
 <body>
   <header class="header">
     <button onclick="location.href='app.html'" style="background:none; border:none; color:white; font-size:24px; cursor:pointer;">←</button>
-    <span style="margin-left: 15px; font-weight: bold;">Configurações</span>
+    <span id="txt-settings-title" style="margin-left: 15px; font-weight: bold;">Configurações</span>
   </header>
 
   <main class="container">
     <div class="card">
-      <h3 style="color:var(--primary); margin-top:0;">Meu Perfil</h3>
-      <label style="font-size:14px; color:#666;">Seu Nome:</label>
-      <input type="text" id="editUsername" placeholder="Nome de usuário">
-      <button class="btn" id="btnSalvarPerfil">SALVAR ALTERAÇÕES</button>
+      <h3 id="txt-profile-title" style="margin-top:0;">Meu Perfil</h3>
+      
+      <label id="txt-label-lang">Idioma / Language</label>
+      <select id="selectLang">
+        <option value="pt">Português (BR)</option>
+        <option value="en">English (US)</option>
+        <option value="es">Español</option>
+      </select>
+
+      <label id="txt-label-font">Tamanho da Fonte (Acessibilidade)</label>
+      <select id="selectFontSize">
+        <option value="16px">Padrão</option>
+        <option value="20px">Grande (Idosos)</option>
+        <option value="24px">Muito Grande</option>
+      </select>
+
+      <button class="btn" id="btnSalvarGeral">SALVAR CONFIGURAÇÕES</button>
     </div>
 
     <div class="card">
-      <h3 style="color:var(--primary); margin-top:0;">Aplicativo</h3>
-      <div class="setting-item">
-        <span>Ver tutorial novamente</span>
-        <button class="btn-outline" style="width:auto; padding:5px 15px;" id="btnResetTour">REINICIAR</button>
-      </div>
-      <div class="setting-item">
-        <span>Versão do App</span>
-        <span style="color:#999;">1.0.2</span>
-      </div>
+      <h3 id="txt-app-title" style="margin-top:0;">Aplicativo</h3>
+      <button class="btn-outline" id="btnResetTour">REINICIAR TUTORIAL</button>
     </div>
 
-    <div class="card" style="text-align:center;">
-      <h3 style="color:var(--primary); margin-top:0;">Suporte</h3>
-      <p style="font-size:14px; color:#666;">Dúvidas ou problemas? Fale conosco.</p>
-      <button class="btn" style="background:#25D366;" onclick="window.open('https://wa.me/SEU_NUMERO_AQUI')">SUPORTE WHATSAPP</button>
-    </div>
-
-    <button class="btn-outline" onclick="confirm('Deseja sair?') && location.replace('login.html')">SAIR DA CONTA</button>
+    <button class="btn-outline" style="border-color:#999; color:#999;" onclick="location.replace('login.html')">SAIR DA CONTA</button>
   </main>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js";
-    import { getDatabase, ref, get, update } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-database.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyCtke_2T3e0HDDMqJsfJsRGs5KcKtN3Xe8",
-      authDomain: "scanlistmarket-30143.firebaseapp.com",
-      databaseURL: "https://scanlistmarket-30143-default-rtdb.firebaseio.com",
-      projectId: "scanlistmarket-30143",
-      storageBucket: "scanlistmarket-30143.appspot.com",
-      messagingSenderId: "428406265714",
-      appId: "1:428406265714:web:0a9d92dc1229458a3d6feb"
+  <script>
+    const translations = {
+      pt: { title: "Configurações", profile: "Meu Perfil", lang: "Idioma", font: "Tamanho da Fonte", save: "SALVAR CONFIGURAÇÕES", app: "Aplicativo", tour: "REINICIAR TUTORIAL", msg: "Salvo!" },
+      en: { title: "Settings", profile: "My Profile", lang: "Language", font: "Font Size", save: "SAVE SETTINGS", app: "App Settings", tour: "RESTART TUTORIAL", msg: "Saved!" },
+      es: { title: "Configuraciones", profile: "Mi Perfil", lang: "Idioma", font: "Tamaño de Fuente", save: "GUARDAR AJUSTES", app: "Aplicación", tour: "REINICIAR TUTORIAL", msg: "¡Guardado!" }
     };
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getDatabase(app);
-    let userUID = null;
+    function aplicarConfiguracoes() {
+      const lang = localStorage.getItem("appLang") || "pt";
+      const fontSize = localStorage.getItem("appFontSize") || "16px";
+      
+      document.getElementById("txt-settings-title").innerText = translations[lang].title;
+      document.getElementById("txt-profile-title").innerText = translations[lang].profile;
+      document.getElementById("txt-label-lang").innerText = translations[lang].lang;
+      document.getElementById("txt-label-font").innerText = translations[lang].font;
+      document.getElementById("btnSalvarGeral").innerText = translations[lang].save;
+      document.getElementById("txt-app-title").innerText = translations[lang].app;
+      document.getElementById("btnResetTour").innerText = translations[lang].tour;
 
-    onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        userUID = user.uid;
-        const snap = await get(ref(db, 'users/' + userUID));
-        if (snap.exists()) {
-          document.getElementById("editUsername").value = snap.val().username || "";
-        }
-      } else { location.href = 'login.html'; }
-    });
+      document.documentElement.style.setProperty('--font-size', fontSize);
+      document.body.style.fontSize = fontSize;
+      document.getElementById("selectLang").value = lang;
+      document.getElementById("selectFontSize").value = fontSize;
+    }
 
-    document.getElementById("btnSalvarPerfil").onclick = async () => {
-      const novoNome = document.getElementById("editUsername").value.trim();
-      if (!novoNome) return alert("Digite um nome!");
-      await update(ref(db, 'users/' + userUID), { username: novoNome });
-      alert("Perfil atualizado com sucesso!");
+    document.getElementById("btnSalvarGeral").onclick = () => {
+      const lang = document.getElementById("selectLang").value;
+      const font = document.getElementById("selectFontSize").value;
+      localStorage.setItem("appLang", lang);
+      localStorage.setItem("appFontSize", font);
+      aplicarConfiguracoes();
+      alert(translations[lang].msg);
     };
 
     document.getElementById("btnResetTour").onclick = () => {
       localStorage.removeItem("tourVisto");
-      alert("O tutorial aparecerá na próxima vez que você abrir o App!");
+      alert("O tutorial aparecerá no próximo acesso!");
     };
+
+    window.onload = aplicarConfiguracoes;
   </script>
 </body>
 </html>
