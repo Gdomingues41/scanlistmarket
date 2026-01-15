@@ -8,25 +8,18 @@
   <style>
     :root { --primary: #d40000; --success: #28a745; --bg: #f8f9fa; --font-size: 16px; }
     body { font-family: -apple-system, sans-serif; margin: 0; background: var(--bg); padding-bottom: 80px; font-size: var(--font-size); overflow-x: hidden; }
-    
     .header { background: var(--primary); color: white; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
     .header-logo { height: 35px; }
     .nav-icons { display: flex; gap: 20px; align-items: center; }
     .icon-btn { background: none; border: none; font-size: 24px; cursor: pointer; color: white; position: relative; }
     .cart-badge { position: absolute; top: -5px; right: -8px; background: white; color: var(--primary); border-radius: 50%; width: 18px; height: 18px; font-size: 10px; font-weight: 900; display: flex; align-items: center; justify-content: center; }
-
     .container { padding: 20px; text-align: center; max-width: 500px; margin: 0 auto; }
     .card { background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 20px; border: 1px solid #eee; }
-    
-    /* ÁREA DO SCANNER */
     #reader { width: 100%; border-radius: 12px; overflow: hidden; margin-bottom: 20px; display: none; border: 2px solid var(--primary); }
-    
     input { width: 100%; padding: 15px; border: 2px solid #eee; border-radius: 12px; margin-bottom: 12px; text-align: center; font-size: 1em; box-sizing: border-box; outline: none; }
     .btn { background: var(--primary); color: white; border: none; padding: 18px; border-radius: 12px; width: 100%; font-weight: bold; cursor: pointer; font-size: 1em; }
-
     .qty-box { display: flex; align-items: center; justify-content: center; gap: 20px; margin: 20px 0; }
     .qty-btn { background: #f0f0f0; border: none; width: 45px; height: 45px; border-radius: 50%; font-size: 22px; font-weight: bold; cursor: pointer; }
-
     .modal-carrinho { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 2000; padding: 20px; box-sizing: border-box; overflow-y: auto; }
     .cart-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #eee; }
     .btn-excluir { background: #fff1f1; color: var(--primary); border: 1px solid var(--primary); padding: 5px 10px; border-radius: 8px; font-size: 11px; font-weight: bold; cursor: pointer; }
@@ -38,7 +31,7 @@
   <header class="header">
     <div style="display:flex; align-items:center; gap:10px;">
       <img src="logo-white.png" class="header-logo">
-      <div style="line-height:1.2"><small style="font-size:9px">BEM-VINDO,</small><br><span id="userNameDisplay" style="font-weight:bold;">...</span></div>
+      <div style="line-height:1.2"><small style="font-size:9px" id="txt-welcome">BEM-VINDO,</small><br><span id="userNameDisplay" style="font-weight:bold;">...</span></div>
     </div>
     <div class="nav-icons">
       <button class="icon-btn" onclick="location.href='history.html'">📊</button>
@@ -49,7 +42,7 @@
 
   <main class="container">
     <div id="reader"></div>
-    <button class="btn" id="btnIniciarScan" style="margin-bottom:20px;">📷 ESCANEAR PRODUTO</button>
+    <button class="btn" id="btnIniciarScan" style="margin-bottom:20px;">📷 <span id="txt-scan-btn">ESCANEAR PRODUTO</span></button>
 
     <div class="card">
       <input type="text" id="inputManualCode" placeholder="CÓDIGO DE BARRAS" inputmode="numeric">
@@ -57,32 +50,25 @@
     </div>
 
     <div id="productCard" class="card" style="display:none; border-top: 5px solid var(--success);">
-      <input type="text" id="pNomeInput" placeholder="Nome do Produto">
+      <input type="text" id="pNomeInput" placeholder="Nome">
       <input type="number" id="pPreco" placeholder="Preço R$" step="0.01">
-      <div class="qty-box">
-        <button class="qty-btn" id="btnMinus">-</button>
-        <span id="pQtdDisplay" style="font-weight:bold; font-size:1.5em;">1</span>
-        <button class="qty-btn" id="btnPlus">+</button>
-      </div>
+      <div class="qty-box"><button class="qty-btn" id="btnMinus">-</button><span id="pQtdDisplay" style="font-weight:bold; font-size:1.5em;">1</span><button class="qty-btn" id="btnPlus">+</button></div>
       <button class="btn" id="btnConfirmar" style="background:var(--success)">ADICIONAR</button>
     </div>
 
     <div class="card" style="border-top: 5px solid var(--primary);">
-      <small style="font-weight:bold; color:#666">TOTAL ATUAL</small>
+      <small style="font-weight:bold; color:#666" id="txt-total-label">TOTAL NO CARRINHO</small>
       <div style="font-size:2.2em; font-weight:900; color:var(--primary);">R$ <span id="totalGeral">0.00</span></div>
     </div>
   </main>
 
   <div id="modalListagem" class="modal-carrinho">
     <div style="display:flex; justify-content: space-between; align-items:center; border-bottom: 2px solid var(--primary); padding-bottom: 15px;">
-      <h2 style="color:var(--primary); margin:0;">Meus Itens</h2>
+      <h2 style="color:var(--primary); margin:0;" id="txt-cart-title">Meus Itens</h2>
       <button id="btnFecharCarrinho" style="font-size:35px; border:none; background:none; cursor:pointer;">&times;</button>
     </div>
     <div id="listaItens"></div>
-    <div class="total-modal">
-      <span>TOTAL:</span>
-      <span>R$ <span id="totalModalVal">0.00</span></span>
-    </div>
+    <div class="total-modal"><span id="txt-total-modal">TOTAL:</span><span>R$ <span id="totalModalVal">0.00</span></span></div>
     <button class="btn" id="btnFinalizarCompra" style="background:var(--success); font-size:1.2em;">FINALIZAR E SALVAR</button>
   </div>
 
@@ -97,9 +83,30 @@
     const db = getDatabase(app);
     let userUID = null; let lastCode = ""; let currentQty = 1; let html5QrCode;
 
+    // DICIONÁRIO MULTILINGUAGEM
+    const dict = {
+      pt: { welcome: "BEM-VINDO,", scan: "ESCANEAR PRODUTO", manual: "BUSCAR MANUALMENTE", total: "TOTAL NO CARRINHO", cart: "Meus Itens", finish: "FINALIZAR E SALVAR", confirm: "Confirmar compra?", empty: "Carrinho Vazio", del: "EXCLUIR" },
+      en: { welcome: "WELCOME,", scan: "SCAN PRODUCT", manual: "MANUAL SEARCH", total: "CART TOTAL", cart: "My Items", finish: "FINISH AND SAVE", confirm: "Confirm purchase?", empty: "Empty Cart", del: "DELETE" },
+      es: { welcome: "BIENVENIDO,", scan: "ESCANEAR PRODUCTO", manual: "BUSCAR MANUALMENTE", total: "TOTAL DEL CARRITO", cart: "Mis Artículos", finish: "FINALIZAR Y GUARDAR", confirm: "¿Confirmar compra?", empty: "Carrito Vacío", del: "ELIMINAR" }
+    };
+
+    function aplicarPreferencias() {
+      const lang = localStorage.getItem("appLang") || "pt";
+      const font = localStorage.getItem("appFontSize") || "16px";
+      document.documentElement.style.setProperty('--font-size', font);
+      document.getElementById("txt-welcome").innerText = dict[lang].welcome;
+      document.getElementById("txt-scan-btn").innerText = dict[lang].scan;
+      document.getElementById("btnBuscaManual").innerText = dict[lang].manual;
+      document.getElementById("txt-total-label").innerText = dict[lang].total;
+      document.getElementById("txt-cart-title").innerText = dict[lang].cart;
+      document.getElementById("txt-total-modal").innerText = dict[lang].total.split(' ')[0] + ":";
+      document.getElementById("btnFinalizarCompra").innerText = dict[lang].finish;
+    }
+
     onAuthStateChanged(auth, (user) => {
       if (user) {
         userUID = user.uid;
+        aplicarPreferencias();
         onValue(ref(db, 'users/' + userUID), (snap) => {
           if (snap.exists()) {
             const total = snap.val().totalCart || 0;
@@ -114,23 +121,16 @@
       } else { window.location.href = "login.html"; }
     });
 
-    // LÓGICA DO SCANNER REATIVADA
+    // SCANNER E BUSCA
     document.getElementById("btnIniciarScan").onclick = () => {
       const reader = document.getElementById("reader");
       reader.style.display = "block";
       html5QrCode = new Html5Qrcode("reader");
-      html5QrCode.start(
-        { facingMode: "environment" }, 
-        { fps: 10, qrbox: { width: 250, height: 150 } },
-        (decodedText) => {
-          html5QrCode.stop();
-          reader.style.display = "none";
-          buscarAPI(decodedText);
-        }
-      ).catch(err => alert("Erro na câmera: " + err));
+      html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, (text) => {
+        html5QrCode.stop(); reader.style.display = "none"; buscarAPI(text);
+      });
     };
 
-    // BUSCA MANUAL
     document.getElementById("btnBuscaManual").onclick = () => {
       const code = document.getElementById("inputManualCode").value.trim();
       if(code) buscarAPI(code);
@@ -140,12 +140,9 @@
       lastCode = codigo; currentQty = 1; document.getElementById("pQtdDisplay").innerText = "1";
       document.getElementById("productCard").style.display = "block";
       document.getElementById("pNomeInput").value = "Buscando...";
-      document.getElementById("pPreco").value = "";
-
       const local = await get(ref(db, `products/${codigo}`));
-      if(local.exists()){
-        document.getElementById("pNomeInput").value = local.val().nome;
-      } else {
+      if(local.exists()){ document.getElementById("pNomeInput").value = local.val().nome; }
+      else {
         try {
           const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${codigo}?fields=product_name`);
           const data = await res.json();
@@ -155,65 +152,58 @@
       document.getElementById("pPreco").focus();
     }
 
-    // QUANTIDADE
     document.getElementById("btnPlus").onclick = () => { currentQty++; document.getElementById("pQtdDisplay").innerText = currentQty; };
     document.getElementById("btnMinus").onclick = () => { if(currentQty > 1) { currentQty--; document.getElementById("pQtdDisplay").innerText = currentQty; } };
 
-    // ADICIONAR AO FIREBASE
     document.getElementById("btnConfirmar").onclick = async () => {
       const nome = document.getElementById("pNomeInput").value;
       const preco = parseFloat(document.getElementById("pPreco").value);
-      if(!nome || isNaN(preco)) return alert("Preencha os dados!");
-      
+      if(!nome || isNaN(preco)) return alert("Dados inválidos!");
       const sub = preco * currentQty;
       await push(ref(db, `users/${userUID}/items`), { nome, preco, qtd: currentQty, subtotal: sub });
       const snap = await get(ref(db, 'users/' + userUID));
       await update(ref(db, 'users/' + userUID), { totalCart: (snap.val().totalCart || 0) + sub });
-      
       document.getElementById("productCard").style.display = "none";
       document.getElementById("inputManualCode").value = "";
     };
 
-    // MODAL CARRINHO COM EXCLUSÃO
-    async function carregarListaItens() {
+    // MODAL E FINALIZAÇÃO
+    async function carregarLista() {
+      const lang = localStorage.getItem("appLang") || "pt";
       const listaDiv = document.getElementById("listaItens");
       const snap = await get(ref(db, `users/${userUID}/items`));
-      listaDiv.innerHTML = snap.exists() ? "" : "<p style='text-align:center;'>Carrinho Vazio</p>";
+      listaDiv.innerHTML = snap.exists() ? "" : `<p style='text-align:center;'>${dict[lang].empty}</p>`;
       if(snap.exists()) {
         snap.forEach(item => {
-          const d = item.val();
           listaDiv.innerHTML += `<div class="cart-item">
-            <div><b>${d.nome}</b><br><small>${d.qtd}x R$ ${d.preco.toFixed(2)}</small></div>
+            <div><b>${item.val().nome}</b><br><small>${item.val().qtd}x R$ ${item.val().preco.toFixed(2)}</small></div>
             <div style="display:flex; align-items:center; gap:10px;">
-              <span style="font-weight:bold; color:var(--primary);">R$ ${d.subtotal.toFixed(2)}</span>
-              <button class="btn-excluir" onclick="removerItemCarrinho('${item.key}', ${d.subtotal})">EXCLUIR</button>
+              <span style="font-weight:bold; color:var(--primary);">R$ ${item.val().subtotal.toFixed(2)}</span>
+              <button class="btn-excluir" onclick="removerItem('${item.key}', ${item.val().subtotal})">${dict[lang].del}</button>
             </div>
           </div>`;
         });
       }
     }
 
-    window.removerItemCarrinho = async (key, val) => {
-      if(confirm("Remover item?")) {
-        await remove(ref(db, `users/${userUID}/items/${key}`));
-        const snap = await get(ref(db, 'users/' + userUID));
-        const novo = (snap.val().totalCart || 0) - val;
-        await update(ref(db, 'users/' + userUID), { totalCart: novo < 0 ? 0 : novo });
-        carregarListaItens();
-      }
+    window.removerItem = async (key, val) => {
+      await remove(ref(db, `users/${userUID}/items/${key}`));
+      const snap = await get(ref(db, 'users/' + userUID));
+      await update(ref(db, 'users/' + userUID), { totalCart: (snap.val().totalCart || 0) - val });
+      carregarLista();
     };
 
-    document.getElementById("btnAbrirCarrinho").onclick = () => { document.getElementById("modalListagem").style.display = "block"; carregarListaItens(); };
+    document.getElementById("btnAbrirCarrinho").onclick = () => { document.getElementById("modalListagem").style.display = "block"; carregarLista(); };
     document.getElementById("btnFecharCarrinho").onclick = () => document.getElementById("modalListagem").style.display = "none";
 
     document.getElementById("btnFinalizarCompra").onclick = async () => {
+      const lang = localStorage.getItem("appLang") || "pt";
       const total = parseFloat(document.getElementById("totalModalVal").innerText);
-      if (total <= 0) return alert("Vazio!");
-      if (confirm(`Finalizar R$ ${total.toFixed(2)}?`)) {
+      if (total <= 0) return;
+      if (confirm(dict[lang].confirm)) {
         await push(ref(db, `users/${userUID}/history`), { data: Date.now(), total: total });
         await remove(ref(db, `users/${userUID}/items`));
         await update(ref(db, 'users/' + userUID), { totalCart: 0 });
-        alert("Finalizado!");
         location.href = "history.html";
       }
     };
