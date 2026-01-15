@@ -22,11 +22,16 @@
     .product-card { background: white; padding: 25px; border-radius: 16px; display: none; margin-top: 20px; box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
     .qty-box { display: flex; align-items: center; justify-content: center; gap: 25px; margin: 20px 0; }
     .qty-btn { background: #f0f0f0; border: none; width: 45px; height: 45px; border-radius: 50%; font-size: 22px; font-weight: bold; cursor: pointer; }
-    input { width: 100%; padding: 15px; border: 2px solid #eee; border-radius: 10px; margin-bottom: 12px; text-align: center; font-size: 1em; }
+    input { width: 100%; padding: 15px; border: 2px solid #eee; border-radius: 10px; margin-bottom: 12px; text-align: center; font-size: 1em; box-sizing: border-box; }
     .btn { background: var(--primary); color: white; border: none; padding: 18px; border-radius: 12px; width: 100%; font-weight: bold; font-size: 1em; cursor: pointer; }
-    .cart-badge { position: absolute; top: -5px; right: -8px; background: white; color: var(--primary); border: 2px solid var(--primary); border-radius: 50%; width: 22px; height: 22px; font-size: 11px; font-weight: bold; display: flex; align-items: center; justify-content: center; }
+    
+    /* AJUSTE DA BADGE */
+    .cart-container { position: relative; cursor: pointer; font-size: 30px; }
+    .cart-badge { position: absolute; top: -10px; right: -12px; background: white; color: var(--primary); border: 2.5px solid var(--primary); border-radius: 50%; width: 24px; height: 24px; font-size: 12px; font-weight: 900; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+    
     .cart-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 2000; padding: 20px; box-sizing: border-box; overflow-y: auto; }
     .cart-item { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #eee; }
+    .manual-box { background: white; padding: 15px; border-radius: 16px; border: 1px solid #ddd; margin-top: 20px; }
   </style>
 </head>
 <body>
@@ -35,9 +40,9 @@
       <img src="logo-white.png" class="header-logo">
       <div style="line-height:1.2"><small style="font-size:9px" id="txt-welcome">BEM-VINDO,</small><br><span id="userNameDisplay" style="font-weight:bold;">...</span></div>
     </div>
-    <div style="display:flex; gap:15px; align-items:center;">
+    <div style="display:flex; gap:20px; align-items:center;">
       <button onclick="location.href='history.html'" style="background:none; border:none; font-size:24px; cursor:pointer;">📊</button>
-      <div style="position:relative; cursor:pointer;" id="btnVerCarrinho">🛒<span class="cart-badge" id="cartCount">0</span></div>
+      <div class="cart-container" id="btnVerCarrinho">🛒<span class="cart-badge" id="cartCount">0</span></div>
       <button onclick="location.href='settings.html'" style="background:none; border:none; font-size:24px; cursor:pointer;">⚙️</button>
     </div>
   </header>
@@ -49,6 +54,11 @@
     </div>
     
     <button class="btn" id="btnIniciarScan">📷 <span id="txt-scan-btn">ESCANEAR PRODUTO</span></button>
+
+    <div class="manual-box" id="step-manual">
+        <input type="text" id="inputManualCode" placeholder="DIGITE O CÓDIGO" inputmode="numeric">
+        <button class="btn" id="btnBuscaManual" style="padding:12px; font-size:0.9em;">BUSCAR MANUALMENTE</button>
+    </div>
 
     <div id="productCard" class="product-card">
       <img id="pImg" src="" style="max-height: 120px; margin-bottom: 15px; object-fit: contain;">
@@ -63,7 +73,7 @@
     </div>
 
     <div style="margin-top:25px; background:white; padding:20px; border-radius:16px; border-top:5px solid var(--primary);">
-      <small style="font-weight:bold; color:#666" id="txt-total-label">TOTAL ATUAL</small>
+      <small style="font-weight:bold; color:#666" id="txt-total-label">TOTAL NO CARRINHO</small>
       <div style="font-size:2.2em; font-weight:900; color:var(--primary);">R$ <span id="totalGeral">0.00</span></div>
     </div>
   </main>
@@ -90,9 +100,9 @@
     const html5QrCode = new Html5Qrcode("reader");
 
     const dict = {
-      pt: { welcome: "BEM-VINDO,", scan: "ESCANEAR PRODUTO", total: "TOTAL ATUAL", cart: "Meu Carrinho", finish: "FINALIZAR COMPRA", add: "ADICIONAR" },
-      en: { welcome: "WELCOME,", scan: "SCAN PRODUCT", total: "CURRENT TOTAL", cart: "My Cart", finish: "FINISH PURCHASE", add: "ADD TO CART" },
-      es: { welcome: "BIENVENIDO,", scan: "ESCANEAR PRODUCTO", total: "TOTAL ACTUAL", cart: "Mi Carrito", finish: "FINALIZAR COMPRA", add: "AÑADIR" }
+      pt: { welcome: "BEM-VINDO,", scan: "ESCANEAR PRODUTO", total: "TOTAL NO CARRINHO", cart: "Meu Carrinho", finish: "FINALIZAR COMPRA", add: "ADICIONAR", manual: "BUSCAR MANUALMENTE", placeholder: "DIGITE O CÓDIGO" },
+      en: { welcome: "WELCOME,", scan: "SCAN PRODUCT", total: "CART TOTAL", cart: "My Cart", finish: "FINISH PURCHASE", add: "ADD TO CART", manual: "SEARCH MANUALLY", placeholder: "ENTER CODE" },
+      es: { welcome: "BIENVENIDO,", scan: "ESCANEAR PRODUCTO", total: "TOTAL DEL CARRITO", cart: "Mi Carrito", finish: "FINALIZAR COMPRA", add: "AÑADIR", manual: "BUSCAR MANUALMENTE", placeholder: "DIGITE EL CÓDIGO" }
     };
 
     function aplicarPreferencias() {
@@ -105,6 +115,8 @@
       document.getElementById("txt-cart-title").innerText = dict[lang].cart;
       document.getElementById("btnFinalizarDefinitivo").innerText = dict[lang].finish;
       document.getElementById("btnConfirmar").innerText = dict[lang].add;
+      document.getElementById("btnBuscaManual").innerText = dict[lang].manual;
+      document.getElementById("inputManualCode").placeholder = dict[lang].placeholder;
     }
 
     onAuthStateChanged(auth, (user) => {
@@ -141,6 +153,11 @@
       }).catch(() => alert("Erro ao acessar câmera."));
     };
 
+    document.getElementById("btnBuscaManual").onclick = () => {
+        const code = document.getElementById("inputManualCode").value.trim();
+        if(code) buscarAPI(code);
+    };
+
     document.getElementById("btnTorch").onclick = async () => {
       const track = html5QrCode.getRunningTrack();
       if(track) { torchOn = !torchOn; await track.applyConstraints({ advanced: [{ torch: torchOn }] }); }
@@ -171,6 +188,7 @@
       await push(ref(db, `users/${userUID}/items`), { nome, preco, qtd: currentQty, subtotal: sub });
       await update(ref(db, 'users/' + userUID), { totalCart: (snap.val().totalCart || 0) + sub });
       document.getElementById("productCard").style.display = "none";
+      document.getElementById("inputManualCode").value = "";
     };
 
     document.getElementById("btnVerCarrinho").onclick = carregarCarrinho;
