@@ -6,12 +6,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    :root { --primary: #d40000; --bg: #f8f9fa; --font-size: 16px; }
-    body { font-family: -apple-system, sans-serif; background: var(--bg); margin: 0; font-size: var(--font-size); }
+    :root { --primary: #d40000; --bg: #f8f9fa; }
+    body { font-family: -apple-system, sans-serif; background: var(--bg); margin: 0; }
     .header { background: var(--primary); color: white; padding: 15px; display: flex; align-items: center; }
     .container { padding: 20px; max-width: 500px; margin: 0 auto; }
     .card { background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 20px; text-align: center; }
-    .history-item { display: flex; justify-content: space-between; padding: 12px; border-bottom: 1px solid #eee; font-size: 1em; }
+    .history-item { display: flex; justify-content: space-between; align-items: center; padding: 15px; border-bottom: 1px solid #eee; }
+    .btn-del-hist { background: none; border: none; cursor: pointer; font-size: 18px; padding: 5px; }
     .btn-red { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 10px; width: 100%; font-weight: bold; cursor: pointer; }
   </style>
 </head>
@@ -23,14 +24,13 @@
 
   <main class="container">
     <div class="card">
-      <h3 id="txt-summary-title">Resumo de Gastos</h3>
       <div style="height: 200px;"><canvas id="myChart"></canvas></div>
       <div style="margin-top:10px; font-size: 1.2em; font-weight: bold; color: var(--primary);">
-        Total: R$ <span id="totalAcumulado">0.00</span>
+        Total Acumulado: R$ <span id="totalAcumulado">0.00</span>
       </div>
     </div>
     <div class="card" style="text-align: left;">
-      <h3 style="color:var(--primary)">Últimas Compras</h3>
+      <h3 style="color:var(--primary); margin-top:0;">Últimas Compras</h3>
       <div id="listaHistorico">Carregando...</div>
     </div>
     <button class="btn-red" onclick="location.href='app.html'">VOLTAR AO SCANNER</button>
@@ -39,53 +39,65 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js";
-    import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-database.js";
+    import { getDatabase, ref, onValue, remove } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-database.js";
 
-    const firebaseConfig = { apiKey: "AIzaSyCtke_2T3e0HDDMqJsfJsRGs5KcKtN3Xe8", authDomain: "scanlistmarket-30143.firebaseapp.com", databaseURL: "https://scanlistmarket-30143-default-rtdb.firebaseio.com", projectId: "scanlistmarket-30143", storageBucket: "scanlistmarket-30143.appspot.com", messagingSenderId: "428406265714", appId: "1:428406265714:web:0a9d92dc1229458a3d6feb" };
+    const firebaseConfig = { apiKey: "AIzaSyCtke_2T3e0HDDMqJsfJsRGs5KcKtN3Xe8", authDomain: "scanlistmarket-30143.firebaseapp.com", databaseURL: "https://scanlistmarket-30143-default-rtdb.firebaseio.com", projectId: "scanlistmarket-30143" };
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getDatabase(app);
+    let myChart = null;
 
-    onAuthStateChanged(auth, async (user) => {
+    onAuthStateChanged(auth, (user) => {
       if (user) {
-        const snap = await get(ref(db, `users/${user.uid}/history`));
-        const lista = document.getElementById("listaHistorico");
+        const historyRef = ref(db, `users/${user.uid}/history`);
         
-        if (snap.exists()) {
+        // onValue mantém a lista e o gráfico sincronizados se você excluir algo
+        onValue(historyRef, (snap) => {
+          const lista = document.getElementById("listaHistorico");
           lista.innerHTML = "";
           let somaTotal = 0;
-          const dados = [];
           
-          snap.forEach(item => {
-            const c = item.val();
-            const valor = parseFloat(c.total) || 0;
-            somaTotal += valor;
-            
-            // TRATAMENTO DA DATA (Aceita texto ou número/timestamp)
-            const dataObj = !isNaN(c.data) ? new Date(c.data) : new Date(c.data);
-            const dataFormatada = dataObj.toLocaleDateString('pt-BR');
-            
-            lista.innerHTML = `<div class="history-item">
-                <span>${dataFormatada}</span>
-                <span style="font-weight:bold;">R$ ${valor.toFixed(2)}</span>
-            </div>` + lista.innerHTML;
-          });
-          
+          if (snap.exists()) {
+            snap.forEach(item => {
+              const c = item.val();
+              const key = item.key;
+              const valor = parseFloat(c.total) || 0;
+              somaTotal += valor;
+              const dataFormatada = new Date(c.data).toLocaleDateString('pt-BR');
+              
+              lista.innerHTML = `
+                <div class="history-item">
+                  <div>
+                    <span style="display:block; font-size:14px; color:#666;">${dataFormatada}</span>
+                    <span style="font-weight:900; font-size:16px;">R$ ${valor.toFixed(2)}</span>
+                  </div>
+                  <button class="btn-del-hist" onclick="removerDoHistorico('${user.uid}', '${key}')">🗑️</button>
+                </div>` + lista.innerHTML;
+            });
+          } else {
+            lista.innerHTML = "<p style='color:#999; text-align:center;'>Nenhum registro encontrado.</p>";
+          }
           document.getElementById("totalAcumulado").innerText = somaTotal.toFixed(2);
-          gerarGrafico(somaTotal);
-        } else { lista.innerText = "Nenhuma compra encontrada."; gerarGrafico(0); }
+          atualizarGrafico(somaTotal);
+        });
       } else { location.href = 'login.html'; }
     });
 
-    function gerarGrafico(total) {
+    window.removerDoHistorico = async (uid, key) => {
+      if(confirm("Deseja excluir este registro permanentemente?")) {
+        await remove(ref(db, `users/${uid}/history/${key}`));
+      }
+    };
+
+    function atualizarGrafico(total) {
       const ctx = document.getElementById('myChart').getContext('2d');
-      new Chart(ctx, {
+      if (myChart) myChart.destroy();
+      myChart = new Chart(ctx, {
         type: 'doughnut',
         data: {
-          labels: ['Total'],
-          datasets: [{ data: [total || 0.1, 0], backgroundColor: ['#d40000', '#eee'], borderWidth: 0 }]
+          datasets: [{ data: [total || 0.1, total === 0 ? 1 : 0], backgroundColor: ['#d40000', '#eee'], borderWidth: 0 }]
         },
-        options: { maintainAspectRatio: false, cutout: '80%', plugins: { legend: { display: false } } }
+        options: { cutout: '80%', plugins: { legend: { display: false } } }
       });
     }
   </script>

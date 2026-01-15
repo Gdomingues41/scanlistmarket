@@ -2,24 +2,35 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Scanlist Market - Carrinho</title>
+  <title>Scanlist Market - Oficial</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
   <style>
     :root { --primary: #d40000; --success: #28a745; --bg: #f8f9fa; --font-size: 16px; }
     body { font-family: -apple-system, sans-serif; margin: 0; background: var(--bg); padding-bottom: 80px; font-size: var(--font-size); overflow-x: hidden; }
+    
+    /* HEADER */
     .header { background: var(--primary); color: white; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
     .header-logo { height: 35px; }
     .nav-icons { display: flex; gap: 20px; align-items: center; }
     .icon-btn { background: none; border: none; font-size: 24px; cursor: pointer; color: white; position: relative; }
     .cart-badge { position: absolute; top: -5px; right: -8px; background: white; color: var(--primary); border-radius: 50%; width: 18px; height: 18px; font-size: 10px; font-weight: 900; display: flex; align-items: center; justify-content: center; }
+
+    /* CONTAINER */
     .container { padding: 20px; text-align: center; max-width: 500px; margin: 0 auto; }
     .card { background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 20px; border: 1px solid #eee; }
+    
+    /* SCANNER */
     #reader { width: 100%; border-radius: 12px; overflow: hidden; margin-bottom: 20px; display: none; border: 2px solid var(--primary); }
+    
     input { width: 100%; padding: 15px; border: 2px solid #eee; border-radius: 12px; margin-bottom: 12px; text-align: center; font-size: 1em; box-sizing: border-box; outline: none; }
     .btn { background: var(--primary); color: white; border: none; padding: 18px; border-radius: 12px; width: 100%; font-weight: bold; cursor: pointer; font-size: 1em; }
+
+    /* QUANTIDADE */
     .qty-box { display: flex; align-items: center; justify-content: center; gap: 20px; margin: 20px 0; }
     .qty-btn { background: #f0f0f0; border: none; width: 45px; height: 45px; border-radius: 50%; font-size: 22px; font-weight: bold; cursor: pointer; }
+
+    /* MODAL CARRINHO */
     .modal-carrinho { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 2000; padding: 20px; box-sizing: border-box; overflow-y: auto; }
     .cart-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #eee; }
     .btn-excluir { background: #fff1f1; color: var(--primary); border: 1px solid var(--primary); padding: 5px 10px; border-radius: 8px; font-size: 11px; font-weight: bold; cursor: pointer; }
@@ -52,7 +63,11 @@
     <div id="productCard" class="card" style="display:none; border-top: 5px solid var(--success);">
       <input type="text" id="pNomeInput" placeholder="Nome">
       <input type="number" id="pPreco" placeholder="Preço R$" step="0.01">
-      <div class="qty-box"><button class="qty-btn" id="btnMinus">-</button><span id="pQtdDisplay" style="font-weight:bold; font-size:1.5em;">1</span><button class="qty-btn" id="btnPlus">+</button></div>
+      <div class="qty-box">
+        <button class="qty-btn" id="btnMinus">-</button>
+        <span id="pQtdDisplay" style="font-weight:bold; font-size:1.5em;">1</span>
+        <button class="qty-btn" id="btnPlus">+</button>
+      </div>
       <button class="btn" id="btnConfirmar" style="background:var(--success)">ADICIONAR</button>
     </div>
 
@@ -75,38 +90,42 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js";
-    import { getDatabase, ref, onValue, get, remove, update, push, set } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-database.js";
+    import { getDatabase, ref, onValue, get, remove, update, push } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-database.js";
 
-    const firebaseConfig = { apiKey: "AIzaSyCtke_2T3e0HDDMqJsfJsRGs5KcKtN3Xe8", authDomain: "scanlistmarket-30143.firebaseapp.com", databaseURL: "https://scanlistmarket-30143-default-rtdb.firebaseio.com", projectId: "scanlistmarket-30143", storageBucket: "scanlistmarket-30143.appspot.com", messagingSenderId: "428406265714", appId: "1:428406265714:web:0a9d92dc1229458a3d6feb" };
+    const firebaseConfig = { 
+        apiKey: "AIzaSyCtke_2T3e0HDDMqJsfJsRGs5KcKtN3Xe8", 
+        authDomain: "scanlistmarket-30143.firebaseapp.com", 
+        databaseURL: "https://scanlistmarket-30143-default-rtdb.firebaseio.com", 
+        projectId: "scanlistmarket-30143", 
+        storageBucket: "scanlistmarket-30143.appspot.com", 
+        messagingSenderId: "428406265714", 
+        appId: "1:428406265714:web:0a9d92dc1229458a3d6feb" 
+    };
+    
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getDatabase(app);
     let userUID = null; let lastCode = ""; let currentQty = 1; let html5QrCode;
 
-    // DICIONÁRIO MULTILINGUAGEM
     const dict = {
-      pt: { welcome: "BEM-VINDO,", scan: "ESCANEAR PRODUTO", manual: "BUSCAR MANUALMENTE", total: "TOTAL NO CARRINHO", cart: "Meus Itens", finish: "FINALIZAR E SALVAR", confirm: "Confirmar compra?", empty: "Carrinho Vazio", del: "EXCLUIR" },
-      en: { welcome: "WELCOME,", scan: "SCAN PRODUCT", manual: "MANUAL SEARCH", total: "CART TOTAL", cart: "My Items", finish: "FINISH AND SAVE", confirm: "Confirm purchase?", empty: "Empty Cart", del: "DELETE" },
-      es: { welcome: "BIENVENIDO,", scan: "ESCANEAR PRODUCTO", manual: "BUSCAR MANUALMENTE", total: "TOTAL DEL CARRITO", cart: "Mis Artículos", finish: "FINALIZAR Y GUARDAR", confirm: "¿Confirmar compra?", empty: "Carrito Vacío", del: "ELIMINAR" }
+      pt: { welcome: "BEM-VINDO,", scan: "ESCANEAR PRODUTO", manual: "BUSCAR MANUALMENTE", total: "TOTAL NO CARRINHO", cart: "Meus Itens", finish: "FINALIZAR E SALVAR", del: "EXCLUIR", success: "Compra finalizada!" },
+      en: { welcome: "WELCOME,", scan: "SCAN PRODUCT", manual: "MANUAL SEARCH", total: "CART TOTAL", cart: "My Items", finish: "FINISH AND SAVE", del: "DELETE", success: "Purchase finished!" }
     };
 
-    function aplicarPreferencias() {
+    function aplicarTraducao() {
       const lang = localStorage.getItem("appLang") || "pt";
-      const font = localStorage.getItem("appFontSize") || "16px";
-      document.documentElement.style.setProperty('--font-size', font);
       document.getElementById("txt-welcome").innerText = dict[lang].welcome;
       document.getElementById("txt-scan-btn").innerText = dict[lang].scan;
       document.getElementById("btnBuscaManual").innerText = dict[lang].manual;
       document.getElementById("txt-total-label").innerText = dict[lang].total;
       document.getElementById("txt-cart-title").innerText = dict[lang].cart;
-      document.getElementById("txt-total-modal").innerText = dict[lang].total.split(' ')[0] + ":";
       document.getElementById("btnFinalizarCompra").innerText = dict[lang].finish;
     }
 
     onAuthStateChanged(auth, (user) => {
       if (user) {
         userUID = user.uid;
-        aplicarPreferencias();
+        aplicarTraducao();
         onValue(ref(db, 'users/' + userUID), (snap) => {
           if (snap.exists()) {
             const total = snap.val().totalCart || 0;
@@ -121,7 +140,7 @@
       } else { window.location.href = "login.html"; }
     });
 
-    // SCANNER E BUSCA
+    // SCANNER
     document.getElementById("btnIniciarScan").onclick = () => {
       const reader = document.getElementById("reader");
       reader.style.display = "block";
@@ -131,6 +150,7 @@
       });
     };
 
+    // BUSCA MANUAL
     document.getElementById("btnBuscaManual").onclick = () => {
       const code = document.getElementById("inputManualCode").value.trim();
       if(code) buscarAPI(code);
@@ -152,9 +172,11 @@
       document.getElementById("pPreco").focus();
     }
 
+    // QUANTIDADE
     document.getElementById("btnPlus").onclick = () => { currentQty++; document.getElementById("pQtdDisplay").innerText = currentQty; };
     document.getElementById("btnMinus").onclick = () => { if(currentQty > 1) { currentQty--; document.getElementById("pQtdDisplay").innerText = currentQty; } };
 
+    // ADICIONAR
     document.getElementById("btnConfirmar").onclick = async () => {
       const nome = document.getElementById("pNomeInput").value;
       const preco = parseFloat(document.getElementById("pPreco").value);
@@ -167,12 +189,12 @@
       document.getElementById("inputManualCode").value = "";
     };
 
-    // MODAL E FINALIZAÇÃO
+    // LISTAGEM DO CARRINHO
     async function carregarLista() {
       const lang = localStorage.getItem("appLang") || "pt";
       const listaDiv = document.getElementById("listaItens");
       const snap = await get(ref(db, `users/${userUID}/items`));
-      listaDiv.innerHTML = snap.exists() ? "" : `<p style='text-align:center;'>${dict[lang].empty}</p>`;
+      listaDiv.innerHTML = snap.exists() ? "" : `<p style='text-align:center;'>Vazio</p>`;
       if(snap.exists()) {
         snap.forEach(item => {
           listaDiv.innerHTML += `<div class="cart-item">
@@ -196,15 +218,19 @@
     document.getElementById("btnAbrirCarrinho").onclick = () => { document.getElementById("modalListagem").style.display = "block"; carregarLista(); };
     document.getElementById("btnFecharCarrinho").onclick = () => document.getElementById("modalListagem").style.display = "none";
 
+    // FINALIZAR E VOLTAR AO APP
     document.getElementById("btnFinalizarCompra").onclick = async () => {
-      const lang = localStorage.getItem("appLang") || "pt";
       const total = parseFloat(document.getElementById("totalModalVal").innerText);
+      const lang = localStorage.getItem("appLang") || "pt";
       if (total <= 0) return;
-      if (confirm(dict[lang].confirm)) {
+      if (confirm(dict[lang].success)) {
         await push(ref(db, `users/${userUID}/history`), { data: Date.now(), total: total });
         await remove(ref(db, `users/${userUID}/items`));
         await update(ref(db, 'users/' + userUID), { totalCart: 0 });
-        location.href = "history.html";
+        
+        alert(dict[lang].success);
+        document.getElementById("modalListagem").style.display = "none";
+        document.getElementById("productCard").style.display = "none";
       }
     };
   </script>
