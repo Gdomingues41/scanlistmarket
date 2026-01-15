@@ -21,10 +21,8 @@
     input { width: 100%; padding: 15px; border: 2px solid #eee; border-radius: 12px; margin-bottom: 12px; text-align: center; font-size: 1em; box-sizing: border-box; outline: none; }
     .btn { background: var(--primary); color: white; border: none; padding: 18px; border-radius: 12px; width: 100%; font-weight: bold; cursor: pointer; font-size: 1em; }
 
-    /* MODAL DO CARRINHO */
     .modal-carrinho { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 2000; padding: 20px; box-sizing: border-box; overflow-y: auto; }
     .cart-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #eee; }
-    
     .total-modal { margin: 20px 0; padding: 15px; background: #fff1f1; border-radius: 10px; display: flex; justify-content: space-between; font-weight: 900; font-size: 1.2em; color: var(--primary); }
   </style>
 </head>
@@ -67,14 +65,11 @@
       <h2 style="color:var(--primary); margin:0;">Meus Itens</h2>
       <button id="btnFecharCarrinho" style="font-size:35px; border:none; background:none; cursor:pointer;">&times;</button>
     </div>
-    
     <div id="listaItens" style="margin-top:15px;"></div>
-
     <div class="total-modal">
       <span>TOTAL:</span>
       <span>R$ <span id="totalModalVal">0.00</span></span>
     </div>
-
     <button class="btn" id="btnFinalizarCompra" style="background:var(--success); font-size:1.2em;">FINALIZAR E SALVAR</button>
   </div>
 
@@ -87,7 +82,7 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getDatabase(app);
-    let userUID = null;
+    let userUID = null; let lastCode = "";
 
     onAuthStateChanged(auth, (user) => {
       if (user) {
@@ -106,50 +101,68 @@
       } else { window.location.href = "login.html"; }
     });
 
-    // BOTÃO FINALIZAR (A LÓGICA QUE FALTAVA)
+    // CORREÇÃO: BUSCA MANUAL REATIVADA
+    document.getElementById("btnBuscaManual").onclick = async () => {
+      const code = document.getElementById("inputManualCode").value.trim();
+      if(!code) return alert("Digite um código!");
+      
+      lastCode = code;
+      const card = document.getElementById("productCard");
+      const nomeInput = document.getElementById("pNomeInput");
+      const precoInput = document.getElementById("pPreco");
+
+      card.style.display = "block";
+      nomeInput.value = "Buscando...";
+      precoInput.value = "";
+
+      const local = await get(ref(db, `products/${code}`));
+      if(local.exists()){
+        nomeInput.value = local.val().nome;
+      } else {
+        try {
+          const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${code}?fields=product_name`);
+          const data = await res.json();
+          nomeInput.value = (data.status === 1) ? data.product.product_name : "";
+        } catch(e) { nomeInput.value = ""; }
+      }
+      precoInput.focus();
+    };
+
+    document.getElementById("btnConfirmar").onclick = async () => {
+      const nome = document.getElementById("pNomeInput").value;
+      const preco = parseFloat(document.getElementById("pPreco").value);
+      if(!nome || isNaN(preco)) return alert("Dados inválidos!");
+      
+      await push(ref(db, `users/${userUID}/items`), { nome, preco, qtd: 1, subtotal: preco });
+      const snap = await get(ref(db, 'users/' + userUID));
+      await update(ref(db, 'users/' + userUID), { totalCart: (snap.val().totalCart || 0) + preco });
+      
+      document.getElementById("productCard").style.display = "none";
+      document.getElementById("inputManualCode").value = "";
+    };
+
     document.getElementById("btnFinalizarCompra").onclick = async () => {
       const total = parseFloat(document.getElementById("totalModalVal").innerText);
-      
-      if (total <= 0) {
-        alert("O seu carrinho está vazio!");
-        return;
-      }
+      if (total <= 0) return alert("Carrinho vazio!");
 
-      if (confirm(`Confirmar compra no valor de R$ ${total.toFixed(2)}?`)) {
-        try {
-          const dataAtual = new Date().toLocaleString();
-          
-          // 1. Salva no Histórico
-          await push(ref(db, `users/${userUID}/history`), {
-            data: dataAtual,
-            total: total
-          });
-
-          // 2. Limpa os itens do Carrinho
-          await remove(ref(db, `users/${userUID}/items`));
-
-          // 3. Zera o total no Perfil do Usuário
-          await update(ref(db, 'users/' + userUID), { totalCart: 0 });
-
-          alert("Compra Finalizada! Registro salvo no histórico.");
-          document.getElementById("modalListagem").style.display = "none";
-          
-        } catch (error) {
-          alert("Erro ao finalizar: " + error.message);
-        }
+      if (confirm(`Finalizar compra de R$ ${total.toFixed(2)}?`)) {
+        await push(ref(db, `users/${userUID}/history`), { data: new Date().toLocaleString(), total: total });
+        await remove(ref(db, `users/${userUID}/items`));
+        await update(ref(db, 'users/' + userUID), { totalCart: 0 });
+        alert("Sucesso!");
+        document.getElementById("modalListagem").style.display = "none";
       }
     };
 
-    // Abre/Fecha Modal
     document.getElementById("btnAbrirCarrinho").onclick = async () => {
       document.getElementById("modalListagem").style.display = "block";
       const listaDiv = document.getElementById("listaItens");
       const snap = await get(ref(db, `users/${userUID}/items`));
-      listaDiv.innerHTML = snap.exists() ? "" : "Carrinho Vazio";
+      listaDiv.innerHTML = snap.exists() ? "" : "Vazio";
       snap.forEach(item => {
         listaDiv.innerHTML += `<div class="cart-item">
-          <div><b>${item.val().nome}</b><br><small>${item.val().qtd}x R$ ${item.val().preco.toFixed(2)}</small></div>
-          <div style="font-weight:bold; color:var(--primary);">R$ ${item.val().subtotal.toFixed(2)}</div>
+          <div><b>${item.val().nome}</b><br><small>1x R$ ${item.val().preco.toFixed(2)}</small></div>
+          <div style="font-weight:bold; color:var(--primary);">R$ ${item.val().preco.toFixed(2)}</div>
         </div>`;
       });
     };
