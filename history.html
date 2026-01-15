@@ -6,40 +6,34 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    :root { --primary: #d40000; --gray-light: #f8f9fa; --font-size: 16px; }
-    body { 
-      font-family: -apple-system, sans-serif; 
-      background: var(--gray-light); 
-      margin: 0; 
-      padding-bottom: 30px; 
-      font-size: var(--font-size);
-    }
+    :root { --primary: #d40000; --bg: #f8f9fa; --font-size: 16px; }
+    body { font-family: -apple-system, sans-serif; background: var(--bg); margin: 0; font-size: var(--font-size); }
     .header { background: var(--primary); color: white; padding: 15px; display: flex; align-items: center; }
     .container { padding: 20px; max-width: 500px; margin: 0 auto; }
-    .card { background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 20px; text-align: center; }
+    .card { background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 20px; text-align: center; }
     .history-item { display: flex; justify-content: space-between; padding: 12px; border-bottom: 1px solid #eee; font-size: 1em; }
-    .btn-red { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 10px; width: 100%; font-weight: bold; cursor: pointer; font-size: 1em; }
+    .btn-red { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 10px; width: 100%; font-weight: bold; cursor: pointer; }
   </style>
 </head>
 <body>
   <header class="header">
     <button onclick="location.href='app.html'" style="background:none; border:none; color:white; font-size:24px; cursor:pointer;">←</button>
-    <span id="txt-history-title" style="margin-left: 15px; font-weight: bold;">Meus Gastos</span>
+    <span style="margin-left: 15px; font-weight: bold;">Meus Gastos</span>
   </header>
 
   <main class="container">
     <div class="card">
       <h3 id="txt-summary-title">Resumo de Gastos</h3>
-      <div style="height: 250px;"><canvas id="myChart"></canvas></div>
+      <div style="height: 200px;"><canvas id="myChart"></canvas></div>
       <div style="margin-top:10px; font-size: 1.2em; font-weight: bold; color: var(--primary);">
         Total: R$ <span id="totalAcumulado">0.00</span>
       </div>
     </div>
     <div class="card" style="text-align: left;">
-      <h3 id="txt-list-title" style="color:var(--primary)">Últimas Compras</h3>
-      <div id="listaHistorico">...</div>
+      <h3 style="color:var(--primary)">Últimas Compras</h3>
+      <div id="listaHistorico">Carregando...</div>
     </div>
-    <button class="btn-red" id="btn-back-scanner" onclick="location.href='app.html'">VOLTAR AO SCANNER</button>
+    <button class="btn-red" onclick="location.href='app.html'">VOLTAR AO SCANNER</button>
   </main>
 
   <script type="module">
@@ -47,68 +41,39 @@
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js";
     import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-database.js";
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyCtke_2T3e0HDDMqJsfJsRGs5KcKtN3Xe8",
-      authDomain: "scanlistmarket-30143.firebaseapp.com",
-      databaseURL: "https://scanlistmarket-30143-default-rtdb.firebaseio.com",
-      projectId: "scanlistmarket-30143",
-      storageBucket: "scanlistmarket-30143.appspot.com",
-      messagingSenderId: "428406265714",
-      appId: "1:428406265714:web:0a9d92dc1229458a3d6feb"
-    };
-
+    const firebaseConfig = { apiKey: "AIzaSyCtke_2T3e0HDDMqJsfJsRGs5KcKtN3Xe8", authDomain: "scanlistmarket-30143.firebaseapp.com", databaseURL: "https://scanlistmarket-30143-default-rtdb.firebaseio.com", projectId: "scanlistmarket-30143", storageBucket: "scanlistmarket-30143.appspot.com", messagingSenderId: "428406265714", appId: "1:428406265714:web:0a9d92dc1229458a3d6feb" };
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getDatabase(app);
 
-    const dict = {
-      pt: { title: "Meus Gastos", summary: "Resumo de Gastos", list: "Últimas Compras", back: "VOLTAR AO SCANNER", empty: "Nenhuma compra." },
-      en: { title: "My Expenses", summary: "Spending Summary", list: "Recent Purchases", back: "BACK TO SCANNER", empty: "No purchases." },
-      es: { title: "Mis Gastos", summary: "Resumen de Gastos", list: "Últimas Compras", back: "VOLVER AL ESCÁNER", empty: "Sin compras." }
-    };
-
-    function aplicarPreferencias() {
-      const lang = localStorage.getItem("appLang") || "pt";
-      const font = localStorage.getItem("appFontSize") || "16px";
-      document.documentElement.style.setProperty('--font-size', font);
-      
-      document.getElementById("txt-history-title").innerText = dict[lang].title;
-      document.getElementById("txt-summary-title").innerText = dict[lang].summary;
-      document.getElementById("txt-list-title").innerText = dict[lang].list;
-      document.getElementById("btn-back-scanner").innerText = dict[lang].back;
-      return lang;
-    }
-
     onAuthStateChanged(auth, async (user) => {
-      const currentLang = aplicarPreferencias();
       if (user) {
-        const path = `users/${user.uid}/history`;
-        const snap = await get(ref(db, path));
+        const snap = await get(ref(db, `users/${user.uid}/history`));
         const lista = document.getElementById("listaHistorico");
         
         if (snap.exists()) {
-          const dados = snap.val();
           lista.innerHTML = "";
           let somaTotal = 0;
+          const dados = [];
           
-          Object.values(dados).reverse().forEach(c => {
+          snap.forEach(item => {
+            const c = item.val();
             const valor = parseFloat(c.total) || 0;
             somaTotal += valor;
-            const dataObj = isNaN(c.data) ? new Date(c.data) : new Date(parseInt(c.data));
-            const dataFormatada = dataObj.toLocaleDateString(currentLang === 'en' ? 'en-US' : 'pt-BR');
             
-            lista.innerHTML += `<div class="history-item">
+            // TRATAMENTO DA DATA (Aceita texto ou número/timestamp)
+            const dataObj = !isNaN(c.data) ? new Date(c.data) : new Date(c.data);
+            const dataFormatada = dataObj.toLocaleDateString('pt-BR');
+            
+            lista.innerHTML = `<div class="history-item">
                 <span>${dataFormatada}</span>
                 <span style="font-weight:bold;">R$ ${valor.toFixed(2)}</span>
-            </div>`;
+            </div>` + lista.innerHTML;
           });
           
           document.getElementById("totalAcumulado").innerText = somaTotal.toFixed(2);
           gerarGrafico(somaTotal);
-        } else { 
-          lista.innerText = dict[currentLang].empty; 
-          gerarGrafico(0); 
-        }
+        } else { lista.innerText = "Nenhuma compra encontrada."; gerarGrafico(0); }
       } else { location.href = 'login.html'; }
     });
 
@@ -118,17 +83,9 @@
         type: 'doughnut',
         data: {
           labels: ['Total'],
-          datasets: [{
-            data: [total || 0.1, 0],
-            backgroundColor: ['#d40000', '#f0f0f0'],
-            borderWidth: 0
-          }]
+          datasets: [{ data: [total || 0.1, 0], backgroundColor: ['#d40000', '#eee'], borderWidth: 0 }]
         },
-        options: {
-          maintainAspectRatio: false,
-          cutout: '80%',
-          plugins: { legend: { display: false } }
-        }
+        options: { maintainAspectRatio: false, cutout: '80%', plugins: { legend: { display: false } } }
       });
     }
   </script>
