@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Scanlist Market - Cadastro</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root { --primary: #d40000; --bg: #f8f9fa; }
+    body { font-family: -apple-system, sans-serif; background: var(--bg); display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+    .card { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 90%; max-width: 380px; text-align: center; }
+    input { width: 100%; padding: 15px; margin-bottom: 15px; border: 2px solid #eee; border-radius: 12px; box-sizing: border-box; font-size: 16px; }
+    .btn { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 12px; width: 100%; font-weight: bold; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2 style="color: var(--primary);">Criar Conta</h2>
+    <input type="text" id="newName" placeholder="Seu Nome">
+    <input type="email" id="newEmail" placeholder="Seu e-mail">
+    <input type="password" id="newPass" placeholder="Sua senha">
+    <button class="btn" id="btnSignUp">CADASTRAR</button>
+    <p style="margin-top:20px; font-size:14px;">Já tem conta? <a href="index.html" style="color:var(--primary); text-decoration:none; font-weight:bold;">Faça Login</a></p>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
+    import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js";
+    import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-database.js";
+
+    const firebaseConfig = { 
+        apiKey: "AIzaSyCtke_2T3e0HDDMqJsfJsRGs5KcKtN3Xe8", 
+        authDomain: "scanlistmarket-30143.firebaseapp.com", 
+        databaseURL: "https://scanlistmarket-30143-default-rtdb.firebaseio.com", 
+        projectId: "scanlistmarket-30143" 
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getDatabase(app);
+
+    document.getElementById("btnSignUp").onclick = async () => {
+      const name = document.getElementById("newName").value;
+      const email = document.getElementById("newEmail").value;
+      const pass = document.getElementById("newPass").value;
+
+      try {
+        const res = await createUserWithEmailAndPassword(auth, email, pass);
+        // Salva o nome no Realtime Database
+        await set(ref(db, 'users/' + res.user.uid), {
+          username: name,
+          totalCart: 0,
+          premium: false // Começa como falso para forçar a ativação
+        });
+        alert("Conta criada! Agora faça o login.");
+        window.location.href = "index.html";
+      } catch (error) {
+        alert("Erro: " + error.message);
+      }
+    };
+  </script>
+</body>
+</html>
