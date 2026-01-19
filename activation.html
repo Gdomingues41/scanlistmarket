@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Ativar Scanlist Market</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root { --primary: #d40000; --bg: #f8f9fa; }
+    body { font-family: sans-serif; background: var(--bg); display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+    .card { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 90%; max-width: 400px; text-align: center; }
+    input { width: 100%; padding: 15px; margin: 20px 0; border: 2px solid #eee; border-radius: 12px; font-size: 1.2em; text-align: center; box-sizing: border-box; }
+    .btn { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 12px; width: 100%; font-weight: bold; cursor: pointer; width: 100%; }
+    .msg { margin-top: 15px; font-size: 0.9em; color: #666; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2 style="color:var(--primary)">Ativação Premium</h2>
+    <p>Insira a chave do seu e-book para liberar o acesso ao scanner.</p>
+    <input type="text" id="inputKey" placeholder="COLE SUA CHAVE AQUI">
+    <button class="btn" id="btnAtivar">ATIVAR APP</button>
+    <p class="msg" id="statusMsg">O uso da chave é único por conta.</p>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js";
+    import { getDatabase, ref, get, update, remove } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-database.js";
+
+    const firebaseConfig = { 
+        apiKey: "AIzaSyCtke_2T3e0HDDMqJsfJsRGs5KcKtN3Xe8", 
+        authDomain: "scanlistmarket-30143.firebaseapp.com", 
+        databaseURL: "https://scanlistmarket-30143-default-rtdb.firebaseio.com", 
+        projectId: "scanlistmarket-30143" 
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getDatabase(app);
+    let userUID = null;
+
+    onAuthStateChanged(auth, (user) => {
+      if (!user) window.location.href = "index.html";
+      userUID = user.uid;
+    });
+
+    document.getElementById("btnAtivar").onclick = async () => {
+      const key = document.getElementById("inputKey").value.trim();
+      const status = document.getElementById("statusMsg");
+
+      if (!key) return alert("Digite a chave!");
+      status.innerText = "Validando...";
+      
+      const keyRef = ref(db, `keys/${key}`);
+      const snap = await get(keyRef);
+
+      if (snap.exists()) {
+        // 1. Torna o usuário Premium
+        await update(ref(db, `users/${userUID}`), { premium: true });
+        // 2. Apaga a chave para não ser reativada
+        await remove(keyRef);
+        
+        alert("Ativado com sucesso!");
+        window.location.href = "app.html";
+      } else {
+        status.innerText = "Chave inválida ou já usada.";
+        status.style.color = "red";
+      }
+    };
+  </script>
+</body>
+</html>

@@ -9,28 +9,23 @@
     :root { --primary: #d40000; --success: #28a745; --bg: #f8f9fa; --font-size: 16px; }
     body { font-family: -apple-system, sans-serif; margin: 0; background: var(--bg); padding-bottom: 80px; font-size: var(--font-size); overflow-x: hidden; }
     
-    /* HEADER */
     .header { background: var(--primary); color: white; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
     .header-logo { height: 35px; }
     .nav-icons { display: flex; gap: 20px; align-items: center; }
     .icon-btn { background: none; border: none; font-size: 24px; cursor: pointer; color: white; position: relative; }
     .cart-badge { position: absolute; top: -5px; right: -8px; background: white; color: var(--primary); border-radius: 50%; width: 18px; height: 18px; font-size: 10px; font-weight: 900; display: flex; align-items: center; justify-content: center; }
 
-    /* CONTAINER */
     .container { padding: 20px; text-align: center; max-width: 500px; margin: 0 auto; }
     .card { background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 20px; border: 1px solid #eee; }
     
-    /* SCANNER */
     #reader { width: 100%; border-radius: 12px; overflow: hidden; margin-bottom: 20px; display: none; border: 2px solid var(--primary); }
     
     input { width: 100%; padding: 15px; border: 2px solid #eee; border-radius: 12px; margin-bottom: 12px; text-align: center; font-size: 1em; box-sizing: border-box; outline: none; }
     .btn { background: var(--primary); color: white; border: none; padding: 18px; border-radius: 12px; width: 100%; font-weight: bold; cursor: pointer; font-size: 1em; }
 
-    /* QUANTIDADE */
     .qty-box { display: flex; align-items: center; justify-content: center; gap: 20px; margin: 20px 0; }
     .qty-btn { background: #f0f0f0; border: none; width: 45px; height: 45px; border-radius: 50%; font-size: 22px; font-weight: bold; cursor: pointer; }
 
-    /* MODAL CARRINHO */
     .modal-carrinho { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 2000; padding: 20px; box-sizing: border-box; overflow-y: auto; }
     .cart-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #eee; }
     .btn-excluir { background: #fff1f1; color: var(--primary); border: 1px solid var(--primary); padding: 5px 10px; border-radius: 8px; font-size: 11px; font-weight: bold; cursor: pointer; }
@@ -96,16 +91,44 @@
         apiKey: "AIzaSyCtke_2T3e0HDDMqJsfJsRGs5KcKtN3Xe8", 
         authDomain: "scanlistmarket-30143.firebaseapp.com", 
         databaseURL: "https://scanlistmarket-30143-default-rtdb.firebaseio.com", 
-        projectId: "scanlistmarket-30143", 
-        storageBucket: "scanlistmarket-30143.appspot.com", 
-        messagingSenderId: "428406265714", 
-        appId: "1:428406265714:web:0a9d92dc1229458a3d6feb" 
+        projectId: "scanlistmarket-30143"
     };
     
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getDatabase(app);
     let userUID = null; let lastCode = ""; let currentQty = 1; let html5QrCode;
+
+    // --- TRAVA DE SEGURANÇA E INICIALIZAÇÃO ---
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        userUID = user.uid;
+        const userRef = ref(db, 'users/' + userUID);
+        
+        onValue(userRef, (snap) => {
+          const userData = snap.val();
+          
+          // Verifica se o campo 'premium' é true. Se não for, redireciona.
+          if (!userData || userData.premium !== true) {
+            window.location.href = "activation.html";
+            return;
+          }
+
+          // Se passou pela trava, carrega o app
+          document.getElementById("userNameDisplay").innerText = userData.username || "Usuário";
+          const total = userData.totalCart || 0;
+          document.getElementById("totalGeral").innerText = total.toFixed(2);
+          document.getElementById("totalModalVal").innerText = total.toFixed(2);
+          aplicarTraducao();
+        });
+
+        onValue(ref(db, `users/${userUID}/items`), (snap) => {
+          document.getElementById("cartCount").innerText = snap.exists() ? Object.keys(snap.val()).length : 0;
+        });
+      } else { 
+        window.location.href = "index.html"; 
+      }
+    });
 
     const dict = {
       pt: { welcome: "BEM-VINDO,", scan: "ESCANEAR PRODUTO", manual: "BUSCAR MANUALMENTE", total: "TOTAL NO CARRINHO", cart: "Meus Itens", finish: "FINALIZAR E SALVAR", del: "EXCLUIR", success: "Compra finalizada!" },
@@ -122,24 +145,6 @@
       document.getElementById("btnFinalizarCompra").innerText = dict[lang].finish;
     }
 
-    onAuthStateChanged(auth, (user) => {
-      if (user) {
-        userUID = user.uid;
-        aplicarTraducao();
-        onValue(ref(db, 'users/' + userUID), (snap) => {
-          if (snap.exists()) {
-            const total = snap.val().totalCart || 0;
-            document.getElementById("userNameDisplay").innerText = snap.val().username;
-            document.getElementById("totalGeral").innerText = total.toFixed(2);
-            document.getElementById("totalModalVal").innerText = total.toFixed(2);
-          }
-        });
-        onValue(ref(db, `users/${userUID}/items`), (snap) => {
-          document.getElementById("cartCount").innerText = snap.exists() ? Object.keys(snap.val()).length : 0;
-        });
-      } else { window.location.href = "login.html"; }
-    });
-
     // SCANNER
     document.getElementById("btnIniciarScan").onclick = () => {
       const reader = document.getElementById("reader");
@@ -150,7 +155,6 @@
       });
     };
 
-    // BUSCA MANUAL
     document.getElementById("btnBuscaManual").onclick = () => {
       const code = document.getElementById("inputManualCode").value.trim();
       if(code) buscarAPI(code);
@@ -172,11 +176,9 @@
       document.getElementById("pPreco").focus();
     }
 
-    // QUANTIDADE
     document.getElementById("btnPlus").onclick = () => { currentQty++; document.getElementById("pQtdDisplay").innerText = currentQty; };
     document.getElementById("btnMinus").onclick = () => { if(currentQty > 1) { currentQty--; document.getElementById("pQtdDisplay").innerText = currentQty; } };
 
-    // ADICIONAR
     document.getElementById("btnConfirmar").onclick = async () => {
       const nome = document.getElementById("pNomeInput").value;
       const preco = parseFloat(document.getElementById("pPreco").value);
@@ -189,7 +191,6 @@
       document.getElementById("inputManualCode").value = "";
     };
 
-    // LISTAGEM DO CARRINHO
     async function carregarLista() {
       const lang = localStorage.getItem("appLang") || "pt";
       const listaDiv = document.getElementById("listaItens");
@@ -218,16 +219,14 @@
     document.getElementById("btnAbrirCarrinho").onclick = () => { document.getElementById("modalListagem").style.display = "block"; carregarLista(); };
     document.getElementById("btnFecharCarrinho").onclick = () => document.getElementById("modalListagem").style.display = "none";
 
-    // FINALIZAR E VOLTAR AO APP
     document.getElementById("btnFinalizarCompra").onclick = async () => {
       const total = parseFloat(document.getElementById("totalModalVal").innerText);
       const lang = localStorage.getItem("appLang") || "pt";
       if (total <= 0) return;
-      if (confirm(dict[lang].success)) {
+      if (confirm(`Finalizar R$ ${total.toFixed(2)}?`)) {
         await push(ref(db, `users/${userUID}/history`), { data: Date.now(), total: total });
         await remove(ref(db, `users/${userUID}/items`));
         await update(ref(db, 'users/' + userUID), { totalCart: 0 });
-        
         alert(dict[lang].success);
         document.getElementById("modalListagem").style.display = "none";
         document.getElementById("productCard").style.display = "none";
